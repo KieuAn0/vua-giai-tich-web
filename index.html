@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vua Giải Tích - Hệ Thống Ôn Thi Thử Giữa Kỳ Do Sinh Viên Bách Khoa Phát Triển</title>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1329'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath stroke='%2310b981' stroke-width='2.2' d='M16 8a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'/%3E%3Cpath stroke='%2310b981' stroke-width='2.2' d='M16 2v4m0 20v4M2 16h4m20 0h4m-5.1-10.9l-2.8 2.8m-12.2 12.2l-2.8 2.8m0-17.8l2.8 2.8m12.2 12.2l2.8 2.8'/%3E%3Cpath stroke='%2306b6d4' stroke-width='2.4' d='M15 8l-6 20m8-20l6 20'/%3E%3Ccircle cx='16' cy='7' r='2' fill='%2338bdf8' stroke='%2338bdf8' stroke-width='1.5'/%3E%3Cpath stroke='%2338bdf8' stroke-width='1.8' d='M11 19c3-1.5 7-1.5 10 0'/%3E%3Ccircle cx='16' cy='18.2' r='1.2' fill='%23f59e0b'/%3E%3C/g%3E%3C/svg%3E">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: { bg: '#0f172a', card: '#1e293b', accent: '#06b6d4' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            },
+            startup: { typeset: false }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-effect:hover {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.25);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+        .custom-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(6, 182, 212, 0.4) rgba(15, 23, 42, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-100 font-sans min-h-screen antialiased flex flex-col justify-between" 
+      x-data="{ 
+        openPayModal: false, 
+        openAuthModal: false, 
+        openExamModal: false, 
+        openProfileModal: false, 
+        openGiftcodeModal: false, 
+        openAdminModal: false, 
+        authTab: 'login', 
+        inputGiftcode: '', 
+
+        // QUẢN TRỊ ADMIN: Tab, dữ liệu & phân trang
+        adminTab: 'pending', // 'pending' | 'approved' | 'revenue'
+        allRequestsList: [],
+        approvedRequestsList: [],
+        adminPage: 1,
+        adminApprovedPage: 1,
+        adminPageSize: 5,
+
+        adminEmail: 'kieunguyenan5a2@gmail.com', 
+
+        bankConfig: {
+            bankId: 'TCB', 
+            bankName: 'Techcombank', 
+            accountNo: '6242302008', 
+            accountName: 'KIEU NGUYEN AN'
+        }, 
+
+        payData: {
+            title: '', 
+            price: 6000, 
+            type: 'single', 
+            moduleCode: '', 
+            transferContent: '', 
+            qrUrl: ''
+        }, 
+
+        isLoggedIn: false, 
+
+        user: { 
+            id: '', 
+            name: '', 
+            email: '', 
+            password: '', 
+            vipExpireTimestamp: 0, 
+            joinedDate: '', 
+            availableAttempts: 0, 
+            usedGiftcodes: [], 
+            pendingRequests: [], 
+            transactionHistory: [], 
+            history: []
+        }, 
+
+        nowTime: Date.now(),
+
+        selectedCodes: {
+            algebra: 'MI1141', 
+            calc1: 'MI1111', 
+            calc2: 'MI1121', 
+            calc3: 'MI1131'
+        }, 
+
+        moduleOptions: {
+            algebra: [
+                { code: 'MI1141', label: 'MI1141 - Đại số (Nhóm ngành 1)', diff: 'Khó', lang: 'Tiếng Việt', diffColor: 'text-red-400 bg-red-500/10 border-red-500/20' }, 
+                { code: 'MI1142', label: 'MI1142 - Đại số (Nhóm ngành 2)', diff: 'Trung bình', lang: 'Tiếng Việt', diffColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }, 
+                { code: 'MI1143', label: 'MI1143 - Đại số (Nhóm ngành 3)', diff: 'Cơ bản', lang: 'Tiếng Việt', diffColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }, 
+                { code: 'MI1036', label: 'MI1036 - Đại số (CTTT)', diff: 'Nâng cao', lang: 'English', diffColor: 'text-purple-400 bg-purple-500/10 border-purple-500/20' }
+            ], 
+            calc1: [
+                { code: 'MI1111', label: 'MI1111 - Giải tích I (Nhóm ngành 1)', diff: 'Khó', lang: 'Tiếng Việt', diffColor: 'text-red-400 bg-red-500/10 border-red-500/20' }, 
+                { code: 'MI1112', label: 'MI1112 - Giải tích I (Nhóm ngành 2)', diff: 'Trung bình', lang: 'Tiếng Việt', diffColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }, 
+                { code: 'MI1113', label: 'MI1113 - Giải tích I (Nhóm ngành 3)', diff: 'Cơ bản', lang: 'Tiếng Việt', diffColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }, 
+                { code: 'MI1016', label: 'MI1016 - Giải tích I (CTTT)', diff: 'Nâng cao', lang: 'English', diffColor: 'text-purple-400 bg-purple-500/10 border-purple-500/20' }
+            ], 
+            calc2: [
+                { code: 'MI1121', label: 'MI1121 - Giải tích II (Nhóm ngành 1)', diff: 'Khó', lang: 'Tiếng Việt', diffColor: 'text-red-400 bg-red-500/10 border-red-500/20' }, 
+                { code: 'MI1122', label: 'MI1122 - Giải tích II (Nhóm ngành 2)', diff: 'Trung bình', lang: 'Tiếng Việt', diffColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }, 
+                { code: 'MI1026', label: 'MI1026 - Giải tích II (CTTT)', diff: 'Nâng cao', lang: 'English', diffColor: 'text-purple-400 bg-purple-500/10 border-purple-500/20' }
+            ], 
+            calc3: [
+                { code: 'MI1131', label: 'MI1131 - Giải tích III (Nhóm ngành 1)', diff: 'Khó', lang: 'Tiếng Việt', diffColor: 'text-red-400 bg-red-500/10 border-red-500/20' }, 
+                { code: 'MI1132', label: 'MI1132 - Giải tích III (Nhóm ngành 2)', diff: 'Trung bình', lang: 'Tiếng Việt', diffColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }, 
+                { code: 'MI1133', label: 'MI1133 - Giải tích III (Nhóm ngành 3)', diff: 'Cơ bản', lang: 'Tiếng Việt', diffColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }, 
+                { code: 'MI1046', label: 'MI1046 - PTPV & Chuỗi (CTTT)', diff: 'Nâng cao', lang: 'English', diffColor: 'text-purple-400 bg-purple-500/10 border-purple-500/20' }
+            ]
+        }, 
+
+        getModInfo(subjectKey) {
+            const currentCode = this.selectedCodes[subjectKey]; 
+            return this.moduleOptions[subjectKey].find(m => m.code === currentCode) || this.moduleOptions[subjectKey][0];
+        }, 
+
+        isVipMember() {
+            if (!this.user || !this.user.vipExpireTimestamp) return false;
+            return this.user.vipExpireTimestamp > this.nowTime;
+        }, 
+
+        get vipRemainingDays() {
+            if (!this.isVipMember()) return 0;
+            const diff = Math.max(0, this.user.vipExpireTimestamp - this.nowTime);
+            return Math.ceil(diff / (1000 * 3600 * 24));
+        },
+
+        get currentTier() {
+            if (!this.isVipMember()) return 'Thành viên cơ bản';
+            return this.vipRemainingDays >= 150 ? 'Thành viên kỳ' : 'Thành viên tháng';
+        },
+
+        get vipCountdownText() {
+            if (!this.isVipMember()) return '';
+            const diff = Math.max(0, this.user.vipExpireTimestamp - this.nowTime);
+            const totalSec = Math.floor(diff / 1000);
+            const days = Math.floor(totalSec / (3600 * 24));
+            const hours = Math.floor((totalSec % (3600 * 24)) / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+
+            if (days > 0) {
+                return days + ' ngày ' + hours + 'h ' + minutes + 'p';
+            }
+            return (hours < 10 ? '0' + hours : hours) + ':' + (minutes < 10 ? '0' + minutes : minutes) + ':' + (seconds < 10 ? '0' + seconds : seconds);
+        },
+
+        isAdminAccount() {
+            return this.isLoggedIn && this.user && this.user.email && (this.user.email.toLowerCase() === this.adminEmail.toLowerCase());
+        }, 
+
+        getAccountsDB() {
+            try {
+                return JSON.parse(localStorage.getItem('vgt_accounts')) || {};
+            } catch(e) { return {}; }
+        }, 
+
+        saveAccountsDB(db) {
+            localStorage.setItem('vgt_accounts', JSON.stringify(db));
+        }, 
+
+        // Load cả đơn chờ duyệt và đơn đã duyệt thành công
+        loadAdminRequests() {
+            const db = this.getAccountsDB();
+            let pendingList = [];
+            let approvedList = [];
+
+            for (let email in db) {
+                const acc = db[email];
+                if (acc) {
+                    if (acc.pendingRequests && acc.pendingRequests.length > 0) {
+                        acc.pendingRequests.forEach(req => {
+                            pendingList.push({
+                                ...req,
+                                userEmail: acc.email,
+                                userName: acc.name,
+                                userId: acc.id
+                            });
+                        });
+                    }
+                    if (acc.transactionHistory && acc.transactionHistory.length > 0) {
+                        acc.transactionHistory.forEach(tx => {
+                            if (tx.status === 'Thành công') {
+                                approvedList.push({
+                                    ...tx,
+                                    userEmail: acc.email,
+                                    userName: acc.name,
+                                    userId: acc.id
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+            this.allRequestsList = pendingList;
+            this.approvedRequestsList = approvedList;
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        // Phân trang đơn chờ duyệt
+        get paginatedRequests() {
+            const start = (this.adminPage - 1) * this.adminPageSize;
+            return this.allRequestsList.slice(start, start + this.adminPageSize);
+        },
+
+        get totalAdminPages() {
+            const total = this.allRequestsList.length;
+            return Math.ceil(total / this.adminPageSize) || 1;
+        },
+
+        // Phân trang đơn đã duyệt
+        get paginatedApprovedRequests() {
+            const start = (this.adminApprovedPage - 1) * this.adminPageSize;
+            return this.approvedRequestsList.slice(start, start + this.adminPageSize);
+        },
+
+        get totalAdminApprovedPages() {
+            const total = this.approvedRequestsList.length;
+            return Math.ceil(total / this.adminPageSize) || 1;
+        },
+
+        // Thống kê doanh thu theo tháng
+        get monthlyRevenueStats() {
+            const stats = {};
+            this.approvedRequestsList.forEach(item => {
+                let monthYear = 'Khác';
+                if (item.date) {
+                    const parts = item.date.split('/');
+                    if (parts.length === 3) {
+                        monthYear = `Tháng ${parts[1]}/${parts[2]}`;
+                    }
+                } else if (item.time) {
+                    const dateMatch = item.time.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+                    if (dateMatch) {
+                        const parts = dateMatch[0].split('/');
+                        monthYear = `Tháng ${parts[1]}/${parts[2]}`;
+                    }
+                }
+
+                if (!stats[monthYear]) {
+                    stats[monthYear] = { monthYear, count: 0, total: 0 };
+                }
+                stats[monthYear].count++;
+                stats[monthYear].total += (parseInt(item.price) || 0);
+            });
+
+            return Object.values(stats);
+        },
+
+        // Tổng doanh thu toàn bộ hệ thống
+        get totalSystemRevenue() {
+            return this.approvedRequestsList.reduce((sum, item) => sum + (parseInt(item.price) || 0), 0);
+        },
+
+        adminApproveRequest(reqItem) {
+            const db = this.getAccountsDB();
+            const acc = db[reqItem.userEmail];
+            if (!acc) return;
+
+            const now = Date.now();
+            const oneDayMs = 24 * 60 * 60 * 1000;
+
+            if (reqItem.type === 'single') {
+                acc.availableAttempts = (parseInt(acc.availableAttempts) || 0) + 1;
+            } else if (reqItem.type === 'month') {
+                const currentExpire = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+                acc.vipExpireTimestamp = currentExpire + (30 * oneDayMs);
+            } else if (reqItem.type === 'semester') {
+                const currentExpire = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+                acc.vipExpireTimestamp = currentExpire + (150 * oneDayMs);
+            }
+
+            if (acc.transactionHistory) {
+                const tx = acc.transactionHistory.find(t => t.id === reqItem.id);
+                if (tx) tx.status = 'Thành công';
+            }
+
+            if (acc.pendingRequests) {
+                acc.pendingRequests = acc.pendingRequests.filter(r => r.id !== reqItem.id);
+            }
+            this.saveAccountsDB(db);
+
+            // Cập nhật cả 2 danh sách tại admin
+            this.allRequestsList = this.allRequestsList.filter(r => r.id !== reqItem.id);
+            this.approvedRequestsList.unshift({
+                ...reqItem,
+                status: 'Thành công'
+            });
+
+            if (this.user.email === reqItem.userEmail) {
+                this.user = acc;
+            }
+
+            if (this.paginatedRequests.length === 0 && this.adminPage > 1) {
+                this.adminPage--;
+            }
+
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            showToast('Đã duyệt đơn ' + reqItem.id + ': Tài khoản ' + acc.name + ' đã nhận quyền lợi!', 'success');
+        },
+
+        adminRejectRequest(reqItem) {
+            const db = this.getAccountsDB();
+            const acc = db[reqItem.userEmail];
+            if (!acc) return;
+
+            if (acc.transactionHistory) {
+                const tx = acc.transactionHistory.find(t => t.id === reqItem.id);
+                if (tx) tx.status = 'Bị từ chối';
+            }
+
+            if (acc.pendingRequests) {
+                acc.pendingRequests = acc.pendingRequests.filter(r => r.id !== reqItem.id);
+            }
+            this.saveAccountsDB(db);
+
+            this.allRequestsList = this.allRequestsList.filter(r => r.id !== reqItem.id);
+
+            if (this.user.email === reqItem.userEmail) {
+                this.user = acc;
+            }
+
+            if (this.paginatedRequests.length === 0 && this.adminPage > 1) {
+                this.adminPage--;
+            }
+
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            showToast('Đã từ chối đơn ' + reqItem.id + ' của ' + acc.name + '!', 'error');
+        },
+
+        forgotEmail: '', 
+        forgotOtp: '', 
+        newPassword: '', 
+        step: 1, 
+
+        examSubject: '', 
+        examCode: '', 
+        examMeta: { diff: '', lang: '' }, 
+        examQuestions: [], 
+        currentAnswers: {}, 
+        examSubmitted: false, 
+        examScore: 0, 
+        examTimerSec: 2400, 
+        timerInterval: null, 
+
+        get avgScore() {
+            if (!this.user || !this.user.history || this.user.history.length === 0) return 0; 
+            const sum = this.user.history.reduce((acc, curr) => acc + parseFloat(curr.score), 0); 
+            return (sum / this.user.history.length).toFixed(1);
+        }, 
+
+        get performanceEvaluation() {
+            if (!this.user || !this.user.history || this.user.history.length === 0) {
+                return { grade: 'Chưa thi', gpa: '-', color: 'text-slate-400' };
+            }
+            const avg = parseFloat(this.avgScore); 
+            if (avg >= 9.0) return { grade: 'A+ (Xuất sắc)', gpa: '4.0', color: 'text-emerald-400' }; 
+            if (avg >= 8.5) return { grade: 'A (Giỏi)', gpa: '3.7 - 4.0', color: 'text-cyan-400' }; 
+            if (avg >= 8.0) return { grade: 'B+ (Khá giỏi)', gpa: '3.5', color: 'text-teal-400' }; 
+            if (avg >= 7.0) return { grade: 'B (Khá)', gpa: '3.0', color: 'text-blue-400' }; 
+            if (avg >= 6.5) return { grade: 'C+ (Trung bình khá)', gpa: '2.5', color: 'text-amber-400' }; 
+            if (avg >= 5.5) return { grade: 'C (Trung bình)', gpa: '2.0', color: 'text-yellow-400' }; 
+            if (avg >= 4.0) return { grade: 'D (Trung bình yếu)', gpa: '1.0', color: 'text-orange-400' }; 
+            return { grade: 'F (Kém / Trượt môn)', gpa: '0.0', color: 'text-red-400' };
+        }, 
+
+        init() {
+            const currentEmail = localStorage.getItem('vgt_current_session'); 
+            if (currentEmail) {
+                const db = this.getAccountsDB(); 
+                if (db[currentEmail]) {
+                    this.user = db[currentEmail]; 
+                    if (this.user.availableAttempts === undefined) this.user.availableAttempts = 0; 
+                    if (this.user.vipExpireTimestamp === undefined) this.user.vipExpireTimestamp = 0; 
+                    if (!this.user.usedGiftcodes) this.user.usedGiftcodes = []; 
+                    if (!this.user.pendingRequests) this.user.pendingRequests = []; 
+                    if (!this.user.transactionHistory) this.user.transactionHistory = []; 
+                    this.isLoggedIn = true;
+                }
+            }
+            this.loadAdminRequests();
+
+            setInterval(() => {
+                this.nowTime = Date.now();
+            }, 1000);
+
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        }, 
+
+        renderMath() {
+            setTimeout(() => {
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    window.MathJax.typesetClear(); 
+                    window.MathJax.typesetPromise().catch(e => console.log('MathJax:', e));
+                }
+            }, 100);
+        }, 
+
+        applyGiftcode() {
+            if (!this.isLoggedIn) {
+                showToast('Vui lòng đăng nhập tài khoản trước khi nhập code!', 'error'); 
+                this.authTab = 'login'; 
+                this.openAuthModal = true; 
+                return;
+            }
+
+            const code = this.inputGiftcode.trim().toUpperCase(); 
+            if (!code) {
+                showToast('Vui lòng nhập mã code nhận thưởng!', 'error'); 
+                return;
+            }
+
+            if (!this.user.usedGiftcodes) this.user.usedGiftcodes = []; 
+
+            if (code === 'KIEUNGUYENANCUTEPHOMAIQUE') {
+                if (this.user.usedGiftcodes.includes(code)) {
+                    showToast('Tài khoản của bạn đã sử dụng mã code này rồi!', 'error'); 
+                    return;
+                }
+
+                this.user.availableAttempts = (parseInt(this.user.availableAttempts) || 0) + 1; 
+                this.user.usedGiftcodes.push(code); 
+
+                const db = this.getAccountsDB(); 
+                db[this.user.email] = this.user; 
+                this.saveAccountsDB(db); 
+
+                this.inputGiftcode = ''; 
+                this.openGiftcodeModal = false; 
+                showToast('Nhập code thành công: Bạn được +1 lượt thi thử FREE!', 'success');
+            } else {
+                showToast('Mã code không chính xác hoặc đã hết hạn!', 'error');
+            }
+        }, 
+
+        openSingleBuyModal(subName = '', code = '') {
+            if (!this.isLoggedIn) {
+                showToast('Vui lòng đăng nhập để hệ thống nạp lượt thi!', 'error'); 
+                this.authTab = 'login'; 
+                this.openAuthModal = true; 
+                return;
+            }
+
+            const cleanId = (this.user.id || '').replace(/[^a-zA-Z0-9]/g, ''); 
+            const transferCode = 'VGT ' + cleanId + ' MUALUOT'; 
+            const amount = 6000; 
+
+            this.payData = {
+                title: subName ? ('Nạp lượt thi: ' + subName + ' (' + code + ')') : 'Nạp thêm 1 lượt làm đề thi', 
+                price: amount, 
+                type: 'single', 
+                moduleCode: code, 
+                transferContent: transferCode, 
+                qrUrl: 'https://img.vietqr.io/image/' + this.bankConfig.bankId + '-' + this.bankConfig.accountNo + '-compact2.png?amount=' + amount + '&addInfo=' + encodeURIComponent(transferCode) + '&accountName=' + encodeURIComponent(this.bankConfig.accountName)
+            }; 
+
+            this.openPayModal = true;
+        }, 
+
+        openPackageBuyModal(pkgName, amount, typeKey) {
+            if (!this.isLoggedIn) {
+                showToast('Vui lòng đăng nhập để nâng cấp gói tài khoản!', 'error'); 
+                this.authTab = 'login'; 
+                this.openAuthModal = true; 
+                return;
+            }
+
+            const cleanId = (this.user.id || '').replace(/[^a-zA-Z0-9]/g, ''); 
+            const transferCode = 'VGT ' + cleanId + ' ' + typeKey.toUpperCase(); 
+
+            this.payData = {
+                title: pkgName, 
+                price: amount, 
+                type: typeKey, 
+                moduleCode: 'ALL', 
+                transferContent: transferCode, 
+                qrUrl: 'https://img.vietqr.io/image/' + this.bankConfig.bankId + '-' + this.bankConfig.accountNo + '-compact2.png?amount=' + amount + '&addInfo=' + encodeURIComponent(transferCode) + '&accountName=' + encodeURIComponent(this.bankConfig.accountName)
+            }; 
+
+            this.openPayModal = true;
+        }, 
+
+        submitPaymentRequest() {
+            if (!this.user.pendingRequests) this.user.pendingRequests = []; 
+            if (!this.user.transactionHistory) this.user.transactionHistory = [];
+
+            const newReqId = 'TX' + Date.now().toString().slice(-6);
+            const timeStr = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            const dateStr = new Date().toLocaleDateString('vi-VN');
+
+            const newReq = {
+                id: newReqId, 
+                title: this.payData.title, 
+                price: this.payData.price, 
+                type: this.payData.type, 
+                transferContent: this.payData.transferContent, 
+                time: timeStr, 
+                date: dateStr
+            }; 
+
+            this.user.pendingRequests.unshift(newReq); 
+
+            this.user.transactionHistory.unshift({
+                id: newReqId,
+                title: this.payData.title,
+                price: this.payData.price,
+                type: this.payData.type,
+                time: timeStr + ' ' + dateStr,
+                date: dateStr,
+                status: 'Chờ duyệt'
+            });
+
+            const db = this.getAccountsDB(); 
+            db[this.user.email] = this.user; 
+            this.saveAccountsDB(db); 
+
+            this.loadAdminRequests();
+            this.openPayModal = false; 
+            showToast('Đã gửi yêu cầu đối soát! Đơn đang ở trạng thái CHỜ DUYỆT trong lịch sử giao dịch.', 'success');
+        }, 
+
+        handleStartExamClick(subName, code, meta) {
+            if (!this.isLoggedIn) {
+                showToast('Bạn phải đăng nhập tài khoản để vào phòng thi thử giữa kỳ!', 'error'); 
+                this.authTab = 'login'; 
+                this.openAuthModal = true; 
+                return;
+            }
+
+            if (this.isVipMember()) {
+                this.startExam(subName, code, meta); 
+                return;
+            }
+
+            if (this.user.availableAttempts <= 0) {
+                showToast('Bạn chưa có lượt thi khả dụng! Vui lòng nạp 6k hoặc nâng cấp VIP.', 'error'); 
+                this.openSingleBuyModal(subName, code); 
+                return;
+            }
+
+            this.user.availableAttempts--; 
+            const db = this.getAccountsDB(); 
+            if (db[this.user.email]) {
+                db[this.user.email] = this.user; 
+                this.saveAccountsDB(db);
+            }
+
+            showToast('Đã sử dụng 1 lượt thi. Bạn còn lại ' + this.user.availableAttempts + ' lượt.', 'success'); 
+            this.startExam(subName, code, meta);
+        }, 
+
+        startExam(subName, code, meta) {
+            this.examSubject = subName; 
+            this.examCode = code; 
+            this.examMeta = meta; 
+            this.examSubmitted = false; 
+            this.examScore = 0; 
+            this.currentAnswers = {}; 
+            this.examTimerSec = 2400; 
+
+            if (typeof EXAM_BANK !== 'undefined' && EXAM_BANK[code]) {
+                this.examQuestions = EXAM_BANK[code];
+            } else {
+                this.examQuestions = []; 
+                showToast('Chưa nạp được dữ liệu cho mã ' + code + '! Hãy kiểm tra questions.js.', 'error');
+            }
+            
+            this.openExamModal = true; 
+            this.renderMath(); 
+
+            clearInterval(this.timerInterval); 
+            this.timerInterval = setInterval(() => {
+                if (this.examTimerSec > 0 && !this.examSubmitted) {
+                    this.examTimerSec--;
+                } else if (this.examTimerSec <= 0 && !this.examSubmitted) {
+                    this.submitExam();
+                }
+            }, 1000);
+        }, 
+
+        submitExam() {
+            clearInterval(this.timerInterval); 
+            let correctCount = 0; 
+            this.examQuestions.forEach((item, idx) => {
+                if (this.currentAnswers[idx] === item.correct) {
+                    correctCount++;
+                }
+            }); 
+            this.examScore = ((correctCount / this.examQuestions.length) * 10).toFixed(1); 
+            this.examSubmitted = true; 
+            this.renderMath(); 
+
+            const record = {
+                id: Date.now(), 
+                subject: this.examSubject, 
+                code: this.examCode, 
+                score: this.examScore, 
+                correctCount: correctCount, 
+                total: this.examQuestions.length, 
+                date: new Date().toLocaleDateString('vi-VN') + ' ' + new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+            }; 
+            this.user.history.unshift(record); 
+
+            const db = this.getAccountsDB(); 
+            if (db[this.user.email]) {
+                db[this.user.email] = this.user; 
+                this.saveAccountsDB(db);
+            }
+
+            showToast('Nộp bài thành công! Đúng ' + correctCount + '/' + this.examQuestions.length + ' câu (' + this.examScore + ' điểm).', 'success');
+        }, 
+
+        formatTimer(sec) {
+            const m = Math.floor(sec / 60); 
+            const s = sec % 60; 
+            return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+        }, 
+
+        handleRegister(e) {
+            const form = e.target; 
+            const name = form.querySelector('input[name=name]').value.trim(); 
+            const email = form.querySelector('input[name=email]').value.trim().toLowerCase(); 
+            const password = form.querySelector('input[name=password]').value; 
+
+            if (password.length < 8) {
+                showToast('Mật khẩu tối thiểu 8 ký tự!', 'error'); 
+                return;
+            }
+
+            const db = this.getAccountsDB(); 
+            if (db[email]) {
+                showToast('Email này đã được đăng ký! Vui lòng đăng nhập.', 'error'); 
+                this.authTab = 'login'; 
+                return;
+            }
+
+            const permanentId = 'VGT-' + Math.floor(100000 + Math.random() * 900000); 
+            const newAccount = {
+                id: permanentId, 
+                name: name, 
+                email: email, 
+                password: password, 
+                vipExpireTimestamp: 0, 
+                joinedDate: new Date().toLocaleDateString('vi-VN'), 
+                availableAttempts: 0, 
+                usedGiftcodes: [], 
+                pendingRequests: [], 
+                transactionHistory: [], 
+                history: []
+            }; 
+
+            db[email] = newAccount; 
+            this.saveAccountsDB(db); 
+
+            this.user = newAccount; 
+            this.isLoggedIn = true; 
+            localStorage.setItem('vgt_current_session', email); 
+
+            this.openAuthModal = false; 
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            showToast('Tạo tài khoản thành công! Mã sinh viên của bạn: ' + permanentId, 'success');
+        }, 
+
+        handleLogin(e) {
+            const form = e.target; 
+            const email = form.querySelector('input[name=email]').value.trim().toLowerCase(); 
+            const password = form.querySelector('input[name=password]').value; 
+
+            const db = this.getAccountsDB(); 
+
+            if (db[email]) {
+                if (db[email].password && db[email].password !== password) {
+                    showToast('Mật khẩu không chính xác!', 'error'); 
+                    return;
+                }
+                this.user = db[email]; 
+                if (this.user.availableAttempts === undefined) this.user.availableAttempts = 0; 
+                if (this.user.vipExpireTimestamp === undefined) this.user.vipExpireTimestamp = 0; 
+                if (!this.user.usedGiftcodes) this.user.usedGiftcodes = []; 
+                if (!this.user.pendingRequests) this.user.pendingRequests = []; 
+                if (!this.user.transactionHistory) this.user.transactionHistory = []; 
+            } else {
+                const permanentId = 'VGT-' + Math.floor(100000 + Math.random() * 900000); 
+                const newAccount = {
+                    id: permanentId, 
+                    name: email.split('@')[0].toUpperCase(), 
+                    email: email, 
+                    password: password, 
+                    vipExpireTimestamp: 0, 
+                    joinedDate: new Date().toLocaleDateString('vi-VN'), 
+                    availableAttempts: 0, 
+                    usedGiftcodes: [], 
+                    pendingRequests: [], 
+                    transactionHistory: [], 
+                    history: []
+                }; 
+                db[email] = newAccount; 
+                this.saveAccountsDB(db); 
+                this.user = newAccount;
+            }
+
+            this.isLoggedIn = true; 
+            localStorage.setItem('vgt_current_session', email); 
+            this.loadAdminRequests();
+            this.openAuthModal = false; 
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            showToast('Chào mừng trở lại, ' + this.user.name + ' (Mã: ' + this.user.id + ')!', 'success');
+        }, 
+
+        logout() {
+            localStorage.removeItem('vgt_current_session'); 
+            this.isLoggedIn = false; 
+            this.user = { id: '', name: '', email: '', password: '', vipExpireTimestamp: 0, joinedDate: '', availableAttempts: 0, usedGiftcodes: [], pendingRequests: [], transactionHistory: [], history: [] }; 
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            showToast('Đã đăng xuất an toàn!', 'success');
+        }
+      }">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            
+            <div class="flex items-center space-x-3.5 group cursor-pointer" @click="window.scrollTo({top: 0, behavior: 'smooth'})">
+                <div class="relative flex items-center justify-center">
+                    <div class="absolute -inset-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-2xl blur-md opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                    <div class="relative w-12 h-12 bg-slate-950/95 rounded-xl border border-cyan-400/50 flex items-center justify-center shadow-inner overflow-hidden">
+                        <svg class="w-9 h-9 group-hover:scale-105 transition-transform duration-300" viewBox="0 0 32 32" fill="none">
+                            <g stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]">
+                                <circle cx="16" cy="16" r="8" />
+                                <circle cx="16" cy="16" r="4" stroke-dasharray="2 2" stroke-width="1.5" />
+                                <line x1="16" y1="2" x2="16" y2="5" /><line x1="16" y1="27" x2="16" y2="30" />
+                                <line x1="2" y1="16" x2="5" y2="16" /><line x1="27" y1="16" x2="30" y2="16" />
+                                <line x1="6.1" y1="6.1" x2="8.2" y2="8.2" /><line x1="23.8" y1="23.8" x2="25.9" y2="25.9" />
+                                <line x1="6.1" y1="25.9" x2="8.2" y2="23.8" /><line x1="23.8" y1="8.2" x2="25.9" y2="6.1" />
+                            </g>
+                            <g stroke="#06b6d4" stroke-linecap="round" stroke-linejoin="round" class="drop-shadow-[0_0_8px_rgba(6,182,212,0.9)]">
+                                <circle cx="16" cy="7" r="2.2" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
+                                <line x1="16" y1="3" x2="16" y2="4.8" stroke="#38bdf8" stroke-width="2.2" />
+                                <line x1="14.8" y1="8.8" x2="8.5" y2="28" stroke-width="2.5" />
+                                <line x1="17.2" y1="8.8" x2="23.5" y2="28" stroke-width="2.5" />
+                                <path d="M10.8 19c3.2-1.6 7.2-1.6 10.4 0" stroke="#38bdf8" stroke-width="1.8" />
+                                <circle cx="16" cy="18.2" r="1.3" fill="#f59e0b" stroke="#f59e0b" stroke-width="1.2" />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xl font-black tracking-wider bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.35)]">
+                            VUA GIẢI TÍCH
+                        </span>
+                    </div>
+                    <span class="text-[10px] text-slate-300 font-medium tracking-widest uppercase flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-200 animate-pulse"></span>
+                        Có công mài sắt có ngày nên kim
+                    </span>
+                </div>
+            </div>
+            
+            <nav class="hidden md:flex space-x-8 text-sm font-medium text-slate-300">
+                <a href="#danh-sach-mon" class="hover:text-cyan-400 transition-colors">Thi Thử Giữa Kỳ</a>
+                <a href="#dem-nguoc-tuan" class="hover:text-cyan-400 transition-colors">Đề Thi Tuần</a>
+                <a href="#bang-gia" class="hover:text-cyan-400 transition-colors">Gói Vé Tháng</a>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <button @click="openGiftcodeModal = true" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all">
+                    <i data-lucide="gift" class="w-4 h-4 text-amber-400"></i> Nhập Giftcode
+                </button>
+
+                <button @click="openPackageBuyModal('Vé Tháng Mùa Thi (Không giới hạn môn)', 139000, 'month')" class="bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2">
+                    <i data-lucide="zap" class="w-4 h-4"></i> Đăng Ký Học
+                </button>
+
+                <template x-if="!isLoggedIn">
+                    <div class="flex items-center space-x-2">
+                        <button @click="authTab = 'login'; openAuthModal = true" class="px-3 py-2 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg transition-all border border-slate-700/50">
+                            Đăng Nhập
+                        </button>
+                        <button @click="authTab = 'register'; openAuthModal = true" class="px-3 py-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-lg transition-all">
+                            Đăng Ký
+                        </button>
+                    </div>
+                </template>
+
+                <template x-if="isLoggedIn">
+                    <div class="flex items-center gap-2.5">
+                        
+                        <!-- Khung hiển thị Lượt thi / VIP đếm ngược -->
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all"
+                             :class="isVipMember() ? (currentTier === 'Thành viên kỳ' ? 'bg-purple-500/10 border-purple-500/30 text-purple-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300') : 'bg-slate-800/90 border-slate-700 text-slate-300'">
+                            
+                            <i :data-lucide="isVipMember() ? 'crown' : 'ticket'" class="w-4 h-4" :class="isVipMember() ? (currentTier === 'Thành viên kỳ' ? 'text-purple-400 animate-pulse' : 'text-amber-400 animate-pulse') : 'text-cyan-400'"></i>
+
+                            <div class="text-xs font-mono font-bold leading-none">
+                                <template x-if="isVipMember()">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-sans tracking-wide" :class="currentTier === 'Thành viên kỳ' ? 'text-purple-300 font-black' : 'text-amber-300 font-black'" x-text="currentTier === 'Thành viên kỳ' ? 'Hạng Kỳ' : 'Hạng Tháng'"></span>
+                                        <span class="text-[11px] font-black font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20" x-text="vipCountdownText"></span>
+                                    </div>
+                                </template>
+                                <template x-if="!isVipMember()">
+                                    <div>
+                                        <span>Lượt: </span>
+                                        <span class="text-cyan-400 font-black text-sm" x-text="user.availableAttempts"></span>
+                                        <span class="text-[10px] text-slate-400"> đề</span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <template x-if="!isVipMember()">
+                                <button @click="openSingleBuyModal()" title="Mua thêm 1 lượt thi (6k)" class="ml-1 px-1.5 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold transition-all">
+                                    +6k
+                                </button>
+                            </template>
+                        </div>
+
+                        <div class="relative" x-data="{ openMenu: false }">
+                            <button @click="openMenu = !openMenu" class="flex items-center gap-2 p-1.5 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-cyan-500/50 transition-all">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-emerald-400 text-slate-950 font-black flex items-center justify-center text-xs shadow-md">
+                                    <i data-lucide="user" class="w-4 h-4"></i>
+                                </div>
+                                <div class="text-left hidden sm:block pr-1">
+                                    <span class="block text-xs font-bold text-white truncate max-w-[95px]" x-text="user.name"></span>
+                                    <span class="block text-[10px] font-mono text-cyan-400 font-bold" x-text="user.id"></span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                            </button>
+
+                            <div x-show="openMenu" @click.away="openMenu = false" class="absolute right-0 mt-2 w-56 glass-panel rounded-2xl shadow-2xl border border-slate-700 py-2 text-xs text-slate-300 z-50">
+                                <div class="px-4 py-2 border-b border-slate-800">
+                                    <div class="flex items-center justify-between">
+                                        <p class="font-bold text-white truncate" x-text="user.name"></p>
+                                        <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold"
+                                              :class="isVipMember() ? (currentTier === 'Thành viên kỳ' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30') : 'bg-cyan-500/20 text-cyan-300'"
+                                              x-text="currentTier"></span>
+                                    </div>
+                                    <p class="text-[11px] font-mono font-bold text-cyan-400 mt-0.5" x-text="'Mã: ' + user.id"></p>
+                                    <p class="text-[10px] text-slate-400 truncate mt-0.5" x-text="user.email"></p>
+                                </div>
+                                <button @click="openProfileModal = true; openMenu = false" class="w-full text-left flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-800/80 text-slate-200 transition-colors">
+                                    <i data-lucide="id-card" class="w-4 h-4 text-cyan-400"></i> Xem Hồ Sơ & Lịch Sử Thi
+                                </button>
+                                <button @click="openGiftcodeModal = true; openMenu = false" class="w-full text-left flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-800/80 text-amber-300 transition-colors">
+                                    <i data-lucide="gift" class="w-4 h-4 text-amber-400"></i> Nhập Mã Giftcode Nhận Free
+                                </button>
+
+                                <template x-if="isAdminAccount()">
+                                    <button @click="loadAdminRequests(); openAdminModal = true; adminTab = 'pending'; adminPage = 1; openMenu = false" class="w-full text-left flex items-center gap-2.5 px-4 py-2.5 hover:bg-emerald-500/10 text-emerald-400 border-t border-slate-800/80 transition-colors">
+                                        <i data-lucide="shield-check" class="w-4 h-4"></i> Bảng Quản Trị Xét Duyệt
+                                    </button>
+                                </template>
+
+                                <button @click="logout(); openMenu = false" class="w-full text-left flex items-center gap-2.5 px-4 py-2.5 hover:bg-red-500/10 hover:text-red-400 text-red-400 transition-colors">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i> Đăng Xuất
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+        <section id="dem-nguoc-tuan" class="text-center space-y-6 pt-6">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel border border-cyan-500/30 text-cyan-400 text-xs font-semibold tracking-wide">
+                <i data-lucide="flame" class="w-4 h-4 text-orange-400 animate-bounce"></i> Đề Thi Thử Từng Mã Học Phần
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black tracking-tight leading-tight">
+                Thi Thử Giữa Kỳ Chuẩn Cấu Trúc <br>
+                <span class="bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-200 bg-clip-text text-transparent">Đại Số & Các Môn Giải Tích HUST</span>
+            </h1>
+            <p class="max-w-2xl mx-auto text-slate-400 text-base md:text-lg">
+                Đầy đủ mã lớp theo từng nhóm ngành và chương trình tiên tiến (CTTT). Hiển thị công thức toán học chuyên sâu, hình vẽ trực quan và chấm điểm tự động.
+            </p>
+
+            <div class="max-w-md mx-auto p-5 rounded-2xl glass-panel border border-cyan-500/30 text-center space-y-3 bg-slate-900/80 shadow-xl shadow-cyan-500/5">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 animate-spin"></i> THỜI GIAN CẬP NHẬT ĐỀ MỚI MỖI TUẦN
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 pt-1">
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+                        <span id="cd-days" class="block text-2xl font-black text-cyan-400 font-mono">07</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">Ngày</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+                        <span id="cd-hours" class="block text-2xl font-black text-cyan-400 font-mono">00</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">Giờ</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+                        <span id="cd-minutes" class="block text-2xl font-black text-cyan-400 font-mono">00</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">Phút</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+                        <span id="cd-seconds" class="block text-2xl font-black text-emerald-400 font-mono">00</span>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">Giây</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Subjects Grid Section (4 Môn Học) -->
+        <section id="danh-sach-mon" class="space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <i data-lucide="book-open" class="text-cyan-400"></i> Phòng Thi Thử Giữa Kỳ Theo Mã Học Phần 
+                    </h2>
+                    <h2 class="text-1xl font-bold text-white flex items-center gap-2">
+                         * sau khi thi xong sẽ update thi thử cuối kỳ tự luận có giảng viên chấm nha ae (sẽ live stream chữa đề trực tiếp)
+                    </h2>
+                    <p class="text-sm text-slate-400">Chọn đúng mã lớp theo chương trình đào tạo để hiển thị chính xác độ khó, ngôn ngữ và bộ đề riêng</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- 1. Môn Đại Số -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 glow-effect transition-all flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" x-text="selectedCodes.algebra"></span>
+                            <span class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 15 Câu / 40p</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Đại Số</h3>
+                        <p class="text-xs text-slate-400">Ma trận, định thức, không gian véctơ, hệ phương trình tuyến tính, dạng toàn phương.</p>
+                        
+                        <div class="pt-2">
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Mã học phần:</label>
+                            <select x-model="selectedCodes.algebra" class="w-full bg-slate-900 border border-slate-700 text-xs text-cyan-300 rounded-lg p-2 focus:outline-none focus:border-cyan-400">
+                                <template x-for="mod in moduleOptions.algebra" :key="mod.code">
+                                    <option :value="mod.code" x-text="mod.label"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="pt-2 flex items-center gap-2 flex-wrap text-[11px]">
+                            <span class="px-2 py-0.5 rounded-md border font-semibold" :class="getModInfo('algebra').diffColor">
+                                Độ khó: <strong x-text="getModInfo('algebra').diff"></strong>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-300 flex items-center gap-1">
+                                <i data-lucide="globe" class="w-3 h-3 text-cyan-400"></i> <span x-text="getModInfo('algebra').lang"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between mt-4">
+                        <span class="text-xs font-semibold" :class="isVipMember() || user.availableAttempts > 0 ? 'text-emerald-400' : 'text-slate-400'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'unlock' : 'lock'" class="w-3.5 h-3.5 inline mr-1"></i>
+                            <span x-text="isVipMember() ? ('VIP (' + vipCountdownText + ')') : (user.availableAttempts > 0 ? ('Còn ' + user.availableAttempts + ' Lượt') : '6.000đ / Lượt')"></span>
+                        </span>
+
+                        <button @click="handleStartExamClick('Đại Số', selectedCodes.algebra, getModInfo('algebra'))" 
+                                class="px-3.5 py-2 font-bold text-xs rounded-lg transition-all shadow-md flex items-center gap-1.5"
+                                :class="isVipMember() || user.availableAttempts > 0 ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-amber-500/20'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'play' : 'ticket'" class="w-3.5 h-3.5"></i>
+                            <span x-text="isVipMember() || user.availableAttempts > 0 ? 'Vào Thi Ngay' : 'Nạp Lượt 6k'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Môn Giải Tích 1 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 glow-effect transition-all flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" x-text="selectedCodes.calc1"></span>
+                            <span class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 15 Câu / 40p</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Giải Tích I</h3>
+                        <p class="text-xs text-slate-400">Hàm số một biến, giới hạn vô cùng bé, đạo hàm vi phân, tích phân xác định và chuỗi số.</p>
+
+                        <div class="pt-2">
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Mã học phần:</label>
+                            <select x-model="selectedCodes.calc1" class="w-full bg-slate-900 border border-slate-700 text-xs text-emerald-300 rounded-lg p-2 focus:outline-none focus:border-emerald-400">
+                                <template x-for="mod in moduleOptions.calc1" :key="mod.code">
+                                    <option :value="mod.code" x-text="mod.label"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="pt-2 flex items-center gap-2 flex-wrap text-[11px]">
+                            <span class="px-2 py-0.5 rounded-md border font-semibold" :class="getModInfo('calc1').diffColor">
+                                Độ khó: <strong x-text="getModInfo('calc1').diff"></strong>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-300 flex items-center gap-1">
+                                <i data-lucide="globe" class="w-3 h-3 text-emerald-400"></i> <span x-text="getModInfo('calc1').lang"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between mt-4">
+                        <span class="text-xs font-semibold" :class="isVipMember() || user.availableAttempts > 0 ? 'text-emerald-400' : 'text-slate-400'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'unlock' : 'lock'" class="w-3.5 h-3.5 inline mr-1"></i>
+                            <span x-text="isVipMember() ? ('VIP (' + vipCountdownText + ')') : (user.availableAttempts > 0 ? ('Còn ' + user.availableAttempts + ' Lượt') : '6.000đ / Lượt')"></span>
+                        </span>
+
+                        <button @click="handleStartExamClick('Giải Tích I', selectedCodes.calc1, getModInfo('calc1'))" 
+                                class="px-3.5 py-2 font-bold text-xs rounded-lg transition-all shadow-md flex items-center gap-1.5"
+                                :class="isVipMember() || user.availableAttempts > 0 ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-amber-500/20'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'play' : 'ticket'" class="w-3.5 h-3.5"></i>
+                            <span x-text="isVipMember() || user.availableAttempts > 0 ? 'Vào Thi Ngay' : 'Nạp Lượt 6k'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Môn Giải Tích 2 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 glow-effect transition-all flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20" x-text="selectedCodes.calc2"></span>
+                            <span class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 15 Câu / 40p</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Giải Tích II</h3>
+                        <p class="text-xs text-slate-400">Hàm nhiều biến, đạo hàm riêng, cực trị tự do/có điều kiện, tích phân bội hai bội ba.</p>
+
+                        <div class="pt-2">
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Mã học phần:</label>
+                            <select x-model="selectedCodes.calc2" class="w-full bg-slate-900 border border-slate-700 text-xs text-purple-300 rounded-lg p-2 focus:outline-none focus:border-purple-400">
+                                <template x-for="mod in moduleOptions.calc2" :key="mod.code">
+                                    <option :value="mod.code" x-text="mod.label"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="pt-2 flex items-center gap-2 flex-wrap text-[11px]">
+                            <span class="px-2 py-0.5 rounded-md border font-semibold" :class="getModInfo('calc2').diffColor">
+                                Độ khó: <strong x-text="getModInfo('calc2').diff"></strong>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-300 flex items-center gap-1">
+                                <i data-lucide="globe" class="w-3 h-3 text-purple-400"></i> <span x-text="getModInfo('calc2').lang"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between mt-4">
+                        <span class="text-xs font-semibold" :class="isVipMember() || user.availableAttempts > 0 ? 'text-emerald-400' : 'text-slate-400'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'unlock' : 'lock'" class="w-3.5 h-3.5 inline mr-1"></i>
+                            <span x-text="isVipMember() ? ('VIP (' + vipCountdownText + ')') : (user.availableAttempts > 0 ? ('Còn ' + user.availableAttempts + ' Lượt') : '6.000đ / Lượt')"></span>
+                        </span>
+
+                        <button @click="handleStartExamClick('Giải Tích II', selectedCodes.calc2, getModInfo('calc2'))" 
+                                class="px-3.5 py-2 font-bold text-xs rounded-lg transition-all shadow-md flex items-center gap-1.5"
+                                :class="isVipMember() || user.availableAttempts > 0 ? 'bg-purple-500 hover:bg-purple-400 text-white shadow-purple-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-amber-500/20'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'play' : 'ticket'" class="w-3.5 h-3.5"></i>
+                            <span x-text="isVipMember() || user.availableAttempts > 0 ? 'Vào Thi Ngay' : 'Nạp Lượt 6k'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Môn Giải Tích 3 -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 glow-effect transition-all flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20" x-text="selectedCodes.calc3"></span>
+                            <span class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 15 Câu / 40p</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Giải Tích III</h3>
+                        <p class="text-xs text-slate-400">Phương trình vi phân cấp 1 & 2, chuỗi hàm số, chuỗi Fourier, biến đổi Laplace.</p>
+
+                        <div class="pt-2">
+                            <label class="block text-[11px] font-semibold text-slate-400 mb-1">Mã học phần:</label>
+                            <select x-model="selectedCodes.calc3" class="w-full bg-slate-900 border border-slate-700 text-xs text-orange-300 rounded-lg p-2 focus:outline-none focus:border-orange-400">
+                                <template x-for="mod in moduleOptions.calc3" :key="mod.code">
+                                    <option :value="mod.code" x-text="mod.label"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="pt-2 flex items-center gap-2 flex-wrap text-[11px]">
+                            <span class="px-2 py-0.5 rounded-md border font-semibold" :class="getModInfo('calc3').diffColor">
+                                Độ khó: <strong x-text="getModInfo('calc3').diff"></strong>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-300 flex items-center gap-1">
+                                <i data-lucide="globe" class="w-3 h-3 text-orange-400"></i> <span x-text="getModInfo('calc3').lang"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between mt-4">
+                        <span class="text-xs font-semibold" :class="isVipMember() || user.availableAttempts > 0 ? 'text-emerald-400' : 'text-slate-400'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'unlock' : 'lock'" class="w-3.5 h-3.5 inline mr-1"></i>
+                            <span x-text="isVipMember() ? ('VIP (' + vipCountdownText + ')') : (user.availableAttempts > 0 ? ('Còn ' + user.availableAttempts + ' Lượt') : '6.000đ / Lượt')"></span>
+                        </span>
+
+                        <button @click="handleStartExamClick('Giải Tích III', selectedCodes.calc3, getModInfo('calc3'))" 
+                                class="px-3.5 py-2 font-bold text-xs rounded-lg transition-all shadow-md flex items-center gap-1.5"
+                                :class="isVipMember() || user.availableAttempts > 0 ? 'bg-orange-500 hover:bg-orange-400 text-slate-950 shadow-orange-500/20' : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-amber-500/20'">
+                            <i :data-lucide="isVipMember() || user.availableAttempts > 0 ? 'play' : 'ticket'" class="w-3.5 h-3.5"></i>
+                            <span x-text="isVipMember() || user.availableAttempts > 0 ? 'Vào Thi Ngay' : 'Nạp Lượt 6k'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="bang-gia" class="space-y-8 pt-6">
+            <div class="text-center space-y-2">
+                <h2 class="text-3xl font-bold text-white">Bảng Giá Mở Khóa Đề Cho Sinh Viên</h2>
+                <p class="text-slate-400 text-sm">Học tập và ôn luyện theo lộ trình chuẩn các môn toán</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-slate-300">Mua Lẻ Theo Đề</h3>
+                            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">GIÁ MỚI</span>
+                        </div>
+                        <div class="text-3xl font-black text-white">6.000đ <span class="text-xs text-slate-400 font-normal">/ 1 lượt thi</span></div>
+                        <ul class="text-xs text-slate-400 space-y-2">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Nạp trực tiếp <strong>+1 lượt thi</strong> vào tài khoản</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Sử dụng cho môn học tùy chọn bất kỳ</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Xem lời giải chi tiết và lưu lịch sử thi</li>
+                        </ul>
+                    </div>
+                    <button @click="openSingleBuyModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold text-xs rounded-xl text-white transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="ticket" class="w-4 h-4 text-cyan-400"></i> Mua Lẻ 1 Lượt (+6k)
+                    </button>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border-2 border-cyan-500/50 bg-gradient-to-b from-slate-800/80 to-slate-900/90 flex flex-col justify-between space-y-6 relative glow-effect">
+                    <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-black text-[10px] rounded-full uppercase tracking-wider">PHỔ BIẾN NHẤT</span>
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-bold text-cyan-400">Thành Viên Tháng</h3>
+                        <div class="text-3xl font-black text-white">139.000đ <span class="text-xs text-slate-400 font-normal">/ 30 ngày (+dồn hạn)</span></div>
+                        <ul class="text-xs text-slate-300 space-y-2">
+                            <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-cyan-400"></i> Trở thành <strong>Thành viên tháng</strong> (Cộng 30 ngày)</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-cyan-400"></i> <strong>VÔ HẠN SỐ LƯỢT THI</strong> cho cả 15 mã học phần</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-cyan-400"></i> Tích lũy đủ từ 150 ngày sẽ lên <strong>Thành viên kỳ</strong></li>
+                        </ul>
+                    </div>
+                    <button @click="openPackageBuyModal('Nâng cấp Thành Viên Tháng (139.000đ)', 139000, 'month')" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 font-black text-xs text-slate-950 rounded-xl transition-all shadow-lg shadow-cyan-500/25">ĐĂNG KÝ THÀNH VIÊN THÁNG</button>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-bold text-slate-300">Thành Viên Kỳ</h3>
+                        <div class="text-3xl font-black text-white">350.000đ <span class="text-xs text-slate-400 font-normal">/ 150 ngày (+dồn hạn)</span></div>
+                        <ul class="text-xs text-slate-400 space-y-2">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Trở thành <strong>Thành viên kỳ</strong> (Cộng 150 ngày)</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> <strong>VÔ HẠN SỐ LƯỢT THI</strong> trọn vẹn 5 tháng</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Mua thêm sẽ tự động cộng dồn tiếp vào hạn dùng</li>
+                        </ul>
+                    </div>
+                    <button @click="openPackageBuyModal('Nâng cấp Thành Viên Kỳ (350.000đ)', 350000, 'semester')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold text-xs rounded-xl text-white transition-all">ĐĂNG KÝ THÀNH VIÊN KỲ</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Phòng Thi Thử Giữa Kỳ -->
+    <div x-show="openExamModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" x-transition.opacity>
+        <div @click.away="openExamModal = false" class="glass-panel max-w-3xl w-full p-6 rounded-2xl border border-slate-700 space-y-6 relative max-h-[92vh] flex flex-col justify-between">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="award" class="text-cyan-400"></i> Thi Thử Giữa Kỳ: <span x-text="examSubject"></span> (<span x-text="examCode"></span>)
+                        </h3>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold border" :class="examMeta.diffColor" x-text="'Độ khó: ' + examMeta.diff"></span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 border border-slate-700 text-slate-300" x-text="examMeta.lang"></span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">15 câu trắc nghiệm - 40 phút - Ký hiệu LaTeX & Hình vẽ trực quan</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="px-3.5 py-1.5 rounded-lg border text-sm font-mono font-bold flex items-center gap-1.5"
+                         :class="examTimerSec < 300 ? 'bg-red-500/20 border-red-500/40 text-red-400 animate-pulse' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'">
+                        <i data-lucide="clock" class="w-4 h-4"></i> <span x-text="formatTimer(examTimerSec)"></span>
+                    </div>
+                    <button @click="openExamModal = false" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+
+            <div class="space-y-6 overflow-y-auto pr-3 max-h-[60vh] custom-scroll">
+                <template x-for="(item, qIdx) in examQuestions" :key="qIdx">
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <p class="text-sm font-semibold text-white leading-relaxed">
+                            <span class="text-cyan-400" x-html="item.q"></span>
+                        </p>
+
+                        <template x-if="item.svg">
+                            <div class="py-2" x-html="item.svg"></div>
+                        </template>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <template x-for="(opt, optIdx) in item.options" :key="optIdx">
+                                <label :class="{
+                                    'border-cyan-500 bg-cyan-500/10 text-cyan-300 font-semibold': currentAnswers[qIdx] === optIdx,
+                                    'border-slate-800 hover:border-slate-700 bg-slate-950/60': currentAnswers[qIdx] !== optIdx
+                                }" class="flex items-center gap-2 p-3 rounded-lg border text-xs cursor-pointer transition-all">
+                                    <input type="radio" :name="'question_' + qIdx" :value="optIdx" @change="currentAnswers[qIdx] = optIdx" :disabled="examSubmitted" class="text-cyan-500 focus:ring-0">
+                                    <span x-html="String.fromCharCode(65 + optIdx) + '. ' + opt"></span>
+                                </label>
+                            </template>
+                        </div>
+
+                        <div x-show="examSubmitted" class="mt-3 p-3 rounded-lg text-xs" :class="currentAnswers[qIdx] === item.correct ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' : 'bg-red-500/10 border border-red-500/30 text-red-300'">
+                            <p class="font-bold">Đáp án đúng: <span x-html="String.fromCharCode(65 + item.correct) + '. ' + item.options[item.correct]"></span></p>
+                            <p class="text-slate-300 mt-1"><span class="font-bold">Lời giải chi tiết:</span> <span x-html="item.explain"></span></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <div x-show="examSubmitted" class="text-sm font-bold text-white">
+                    Kết quả bài thi: <span class="text-emerald-400 text-xl font-mono font-black" x-text="examScore + ' / 10 Điểm'"></span>
+                </div>
+                <button x-show="!examSubmitted" @click="submitExam()" class="ml-auto px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 font-bold text-xs text-slate-950 rounded-xl transition-all shadow-lg shadow-cyan-500/20">
+                    NỘP BÀI CHẤM ĐIỂM
+                </button>
+                <button x-show="examSubmitted" @click="openExamModal = false" class="ml-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-white">
+                    Đóng Phòng Thi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HỒ SƠ CÁ NHÂN & LỊCH SỬ THI / GIAO DỊCH -->
+    <div x-show="openProfileModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" x-transition.opacity>
+        <div @click.away="openProfileModal = false" class="glass-panel max-w-2xl w-full p-6 rounded-3xl border border-slate-700 space-y-5 relative max-h-[92vh] flex flex-col justify-between">
+            <button @click="openProfileModal = false" class="absolute top-5 right-5 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+
+            <!-- Header Hồ Sơ -->
+            <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-emerald-400 p-0.5 shadow-lg shadow-cyan-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400">
+                        <i data-lucide="user-check" class="w-8 h-8"></i>
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-black text-white" x-text="user.name"></h3>
+                        <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30" x-text="user.id"></span>
+                    </div>
+                    <p class="text-xs text-slate-400 flex items-center gap-3">
+                        <span x-text="user.email"></span> • 
+                        <span class="font-bold" :class="isVipMember() ? (currentTier === 'Thành viên kỳ' ? 'text-purple-400' : 'text-amber-400') : 'text-cyan-400'" x-text="currentTier"></span> • 
+                        <span x-text="'Tham gia: ' + user.joinedDate"></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- CHỈ SỐ: ĐÃ THI - HẠN DÙNG/LƯỢT - ĐIỂM TB - ĐÁNH GIÁ NĂNG LỰC -->
+            <div class="grid grid-cols-4 gap-2.5">
+                <div class="bg-slate-900/90 p-3 rounded-2xl border border-slate-800 text-center">
+                    <span class="block text-xl font-black text-cyan-400 font-mono" x-text="user.history ? user.history.length : 0"></span>
+                    <span class="text-[10px] text-slate-400">Đã Thi</span>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-2xl border text-center"
+                     :class="isVipMember() ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-800'">
+                    <span class="block text-base font-black font-mono"
+                          :class="isVipMember() ? 'text-amber-400' : 'text-emerald-400'"
+                          x-text="isVipMember() ? vipCountdownText : (user.availableAttempts + ' lượt')"></span>
+                    <span class="text-[10px] text-slate-400" x-text="isVipMember() ? 'Hạn Dùng VIP' : 'Lượt Thi Còn'"></span>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-2xl border border-slate-800 text-center">
+                    <span class="block text-xl font-black text-emerald-400 font-mono" x-text="avgScore"></span>
+                    <span class="text-[10px] text-slate-400">Điểm TB (10)</span>
+                </div>
+                <!-- Ô ĐÁNH GIÁ NĂNG LỰC -->
+                <div class="bg-slate-900/90 p-3 rounded-2xl border border-slate-800 text-center">
+                    <span class="block text-sm font-black font-mono tracking-tight truncate" :class="performanceEvaluation.color" x-text="performanceEvaluation.grade.split(' ')[0]"></span>
+                    <span class="text-[10px] text-slate-400" x-text="'Hệ 4: ' + performanceEvaluation.gpa"></span>
+                </div>
+            </div>
+
+            <!-- Khung Nhập Giftcode -->
+            <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <i data-lucide="gift" class="w-4 h-4 text-amber-400"></i> Mã Code Quà Tặng / Ưu Đãi
+                </label>
+                <div class="flex gap-2">
+                    <input type="text" x-model="inputGiftcode" placeholder="Nhập code nhận thêm lượt thi..." class="flex-1 px-3 py-1.5 bg-slate-950/80 border border-slate-700 rounded-xl text-xs text-white uppercase focus:outline-none focus:border-amber-400 font-mono">
+                    <button type="button" @click="applyGiftcode()" class="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all">
+                        Kích Hoạt
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB LỊCH SỬ THI & LỊCH SỬ GIAO DỊCH -->
+            <div class="space-y-2 overflow-hidden flex-1 flex flex-col" x-data="{ tab: 'exams' }">
+                <div class="flex border-b border-slate-800 pb-1 text-xs gap-4">
+                    <button type="button" @click="tab = 'exams'" :class="{ 'text-cyan-400 font-bold border-b-2 border-cyan-400': tab === 'exams', 'text-slate-400': tab !== 'exams' }" class="pb-1">
+                        Lịch Sử Khảo Thí
+                    </button>
+                    <button type="button" @click="tab = 'transactions'" :class="{ 'text-emerald-400 font-bold border-b-2 border-emerald-400': tab === 'transactions', 'text-slate-400': tab !== 'transactions' }" class="pb-1">
+                        Lịch Sử Giao Dịch & Hóa Đơn (<span x-text="user.transactionHistory ? user.transactionHistory.length : 0"></span>)
+                    </button>
+                </div>
+
+                <!-- 1. Danh sách bài thi đã làm -->
+                <div x-show="tab === 'exams'" class="overflow-y-auto max-h-[20vh] custom-scroll pr-1 space-y-1.5">
+                    <template x-if="!user.history || user.history.length === 0">
+                        <div class="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+                            Bạn chưa tham gia bài thi thử nào.
+                        </div>
+                    </template>
+
+                    <template x-for="item in user.history" :key="item.id">
+                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-white" x-text="item.subject"></span>
+                                    <span class="px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 font-mono text-[10px]" x-text="item.code"></span>
+                                </div>
+                                <p class="text-[10px] text-slate-400" x-text="item.date"></p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-black font-mono" :class="item.score >= 5 ? 'text-emerald-400' : 'text-red-400'" x-text="item.score + ' đ'"></span>
+                                <span class="block text-[10px] text-slate-400" x-text="'Đúng ' + item.correctCount + '/' + item.total"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- 2. Danh sách lịch sử nạp tiền -->
+                <div x-show="tab === 'transactions'" class="overflow-y-auto max-h-[20vh] custom-scroll pr-1 space-y-1.5">
+                    <template x-if="!user.transactionHistory || user.transactionHistory.length === 0">
+                        <div class="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+                            Chưa có giao dịch nạp tiền nào.
+                        </div>
+                    </template>
+
+                    <template x-for="item in user.transactionHistory" :key="item.id">
+                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border text-xs"
+                             :class="{
+                                 'border-amber-500/40 bg-amber-500/5': item.status === 'Chờ duyệt',
+                                 'border-emerald-500/30': item.status === 'Thành công',
+                                 'border-red-500/30 bg-red-500/5': item.status === 'Bị từ chối'
+                             }">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-white" x-text="item.title"></span>
+                                    <span class="px-1.5 py-0.2 rounded font-mono text-[10px]"
+                                          :class="item.status === 'Chờ duyệt' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'"
+                                          x-text="item.id"></span>
+                                </div>
+                                <p class="text-[10px] text-slate-400" x-text="item.time"></p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm font-black font-mono text-white" x-text="'+' + item.price.toLocaleString('vi-VN') + 'đ'"></span>
+                                <span class="block text-[10px] font-bold"
+                                      :class="{
+                                          'text-amber-400 animate-pulse': item.status === 'Chờ duyệt',
+                                          'text-emerald-400': item.status === 'Thành công',
+                                          'text-red-400': item.status === 'Bị từ chối'
+                                      }" x-text="item.status"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-800 flex justify-end gap-2">
+                <template x-if="!isVipMember()">
+                    <button @click="openProfileModal = false; openSingleBuyModal()" class="px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+                        + Mua Thêm Lượt (6k)
+                    </button>
+                </template>
+                <button @click="openProfileModal = false" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NHẬP GIFTCODE ĐỘC LẬP -->
+    <div x-show="openGiftcodeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" x-transition.opacity>
+        <div @click.away="openGiftcodeModal = false" class="glass-panel max-w-sm w-full p-6 rounded-3xl border border-slate-700 space-y-5 relative">
+            <button @click="openGiftcodeModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="text-center space-y-1.5">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-400">
+                    <i data-lucide="gift" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-black text-white">Kích Hoạt Giftcode</h3>
+                <p class="text-xs text-slate-400">Nhập mã ưu đãi hoặc code quà tặng để nhận thêm lượt thi thử miễn phí.</p>
+            </div>
+
+            <div class="space-y-3">
+                <div class="space-y-1 text-left">
+                    <label class="text-xs text-slate-300 font-semibold">Mã Giftcode</label>
+                    <input type="text" x-model="inputGiftcode" placeholder="Nhập mã code..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-mono uppercase text-amber-300 focus:outline-none focus:border-amber-400 text-center tracking-wider font-bold">
+                </div>
+                <button type="button" @click="applyGiftcode()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i> NHẬN LƯỢT THI MIỄN PHÍ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL THANH TOÁN VIETQR: TECHCOMBANK (GIÁ VÉ LƯỢT 6K) -->
+    <div x-show="openPayModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" x-transition.opacity>
+        <div @click.away="openPayModal = false" class="glass-panel max-w-md w-full p-6 rounded-3xl border border-slate-700 space-y-5 relative">
+            <button @click="openPayModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            
+            <div class="text-center space-y-1">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-bold font-mono">
+                    <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> QUÉT MÃ VIETQR TECHCOMBANK
+                </div>
+                <h3 class="text-lg font-black text-white" x-text="payData.title"></h3>
+                <p class="text-2xl font-black text-emerald-400 font-mono" x-text="payData.price.toLocaleString('vi-VN') + ' VNĐ'"></p>
+            </div>
+
+            <!-- Khung Mã QR Động Techcombank 6k -->
+            <div class="bg-white p-3 rounded-2xl max-w-[220px] mx-auto text-center space-y-1 shadow-2xl">
+                <img :src="payData.qrUrl" alt="VietQR Techcombank" class="w-full h-auto mx-auto rounded-lg">
+                <span class="block text-[9px] font-mono text-slate-600 font-bold uppercase tracking-wider">Tự động điền STK, 6.000đ & nội dung</span>
+            </div>
+
+            <div class="bg-slate-900/90 p-3.5 rounded-2xl text-xs space-y-2 border border-slate-800 font-sans">
+                <div class="flex justify-between items-center text-slate-400">
+                    <span>Ngân hàng:</span>
+                    <strong class="text-white" x-text="bankConfig.bankName"></strong>
+                </div>
+                <div class="flex justify-between items-center text-slate-400">
+                    <span>Số tài khoản:</span>
+                    <strong class="text-cyan-400 font-mono tracking-wider text-sm" x-text="bankConfig.accountNo"></strong>
+                </div>
+                <div class="flex justify-between items-center text-slate-400">
+                    <span>Chủ tài khoản:</span>
+                    <strong class="text-white uppercase" x-text="bankConfig.accountName"></strong>
+                </div>
+                <div class="flex justify-between items-center text-slate-400 pt-1 border-t border-slate-800/80">
+                    <span>Cú pháp bắt buộc:</span>
+                    <strong class="text-amber-400 font-mono bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30" x-text="payData.transferContent"></strong>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <button @click="submitPaymentRequest()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 font-black text-xs text-slate-950 rounded-xl transition-all shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2">
+                    <i data-lucide="send" class="w-4 h-4"></i> TÔI ĐÃ CHUYỂN KHOẢN (GỬI XÉT DUYỆT)
+                </button>
+                <p class="text-[10px] text-center text-slate-400">
+                    Hệ thống sẽ đối soát biên lai Techcombank và duyệt kích hoạt cho bạn.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BẢNG QUẢN TRỊ VIÊN: ĐẦY ĐỦ 3 TAB DUYỆT ĐƠN, LỊCH SỬ ĐÃ DUYỆT & DOANH THU THÁNG -->
+    <div x-show="openAdminModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md" x-transition.opacity>
+        <div @click.away="openAdminModal = false" class="glass-panel max-w-5xl w-full p-6 rounded-3xl border border-emerald-500/40 space-y-4 relative shadow-2xl max-h-[92vh] flex flex-col justify-between">
+            <button @click="openAdminModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+
+            <!-- Tiêu đề & Thẻ KPI nhanh -->
+            <div class="border-b border-slate-800 pb-3 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                            <i data-lucide="shield-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-white flex items-center gap-2">
+                                Bảng Quản Trị Hệ Thống
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-[10px]">Chính Chủ</span>
+                            </h3>
+                            <p class="text-xs text-slate-400">Quản lý giao dịch, duyệt tiền sinh viên và đối soát dòng tiền theo từng tháng.</p>
+                        </div>
+                    </div>
+
+                    <!-- Chỉ số KPI tổng quan -->
+                    <div class="flex items-center gap-2 flex-wrap text-xs">
+                        <div class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800">
+                            Chờ duyệt: <strong class="text-amber-400 font-mono" x-text="allRequestsList.length"></strong>
+                        </div>
+                        <div class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800">
+                            Đã duyệt: <strong class="text-emerald-400 font-mono" x-text="approvedRequestsList.length"></strong>
+                        </div>
+                        <div class="px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-400 font-bold font-mono">
+                            Tổng thu: <span x-text="totalSystemRevenue.toLocaleString('vi-VN') + 'đ'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 TAB ĐIỀU HƯỚNG QUẢN TRỊ -->
+                <div class="flex border-b border-slate-800/80 gap-6 text-xs font-semibold pt-1">
+                    <button type="button" @click="adminTab = 'pending'" :class="{ 'text-amber-400 border-b-2 border-amber-400 font-bold': adminTab === 'pending', 'text-slate-400 hover:text-slate-200': adminTab !== 'pending' }" class="pb-2 flex items-center gap-1.5">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        <span>Đơn Chờ Xét Duyệt (<span x-text="allRequestsList.length"></span>)</span>
+                    </button>
+                    
+                    <button type="button" @click="adminTab = 'approved'" :class="{ 'text-emerald-400 border-b-2 border-emerald-400 font-bold': adminTab === 'approved', 'text-slate-400 hover:text-slate-200': adminTab !== 'approved' }" class="pb-2 flex items-center gap-1.5">
+                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                        <span>Lịch Sử Các Đơn Đã Duyệt (<span x-text="approvedRequestsList.length"></span>)</span>
+                    </button>
+
+                    <button type="button" @click="adminTab = 'revenue'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': adminTab === 'revenue', 'text-slate-400 hover:text-slate-200': adminTab !== 'revenue' }" class="pb-2 flex items-center gap-1.5">
+                        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
+                        <span>Tổng Thu Theo Từng Tháng</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: BẢNG ĐƠN CHỜ DUYỆT -->
+            <div x-show="adminTab === 'pending'" class="space-y-3">
+                <div class="overflow-y-auto max-h-[50vh] custom-scroll pr-1 border border-slate-800/80 rounded-2xl bg-slate-950/40">
+                    <template x-if="allRequestsList.length === 0">
+                        <div class="text-center py-16 text-xs text-slate-500">
+                            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                            Hiện tại không có yêu cầu chuyển khoản nào đang chờ xét duyệt.
+                        </div>
+                    </template>
+
+                    <template x-if="allRequestsList.length > 0">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="sticky top-0 bg-slate-900/95 backdrop-blur-md text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">Mã Đơn</th>
+                                    <th class="p-3">Sinh Viên</th>
+                                    <th class="p-3">Gói Yêu Cầu</th>
+                                    <th class="p-3">Cú Pháp CK</th>
+                                    <th class="p-3 text-right">Số Tiền</th>
+                                    <th class="p-3 text-center">Thời Gian</th>
+                                    <th class="p-3 text-center">Hành Động</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 font-sans">
+                                <template x-for="item in paginatedRequests" :key="item.id">
+                                    <tr class="hover:bg-slate-900/60 transition-colors">
+                                        <td class="p-3 font-mono font-bold text-cyan-400" x-text="item.id"></td>
+                                        <td class="p-3">
+                                            <div class="font-bold text-white text-xs" x-text="item.userName"></div>
+                                            <div class="text-[10px] text-slate-400 font-mono" x-text="item.userId + ' • ' + item.userEmail"></div>
+                                        </td>
+                                        <td class="p-3">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                                                  :class="item.type === 'single' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'"
+                                                  x-text="item.title"></span>
+                                        </td>
+                                        <td class="p-3 font-mono text-amber-300 font-bold text-[11px]" x-text="item.transferContent"></td>
+                                        <td class="p-3 text-right font-mono font-black text-emerald-400 text-sm" x-text="item.price.toLocaleString('vi-VN') + 'đ'"></td>
+                                        <td class="p-3 text-center text-slate-400 text-[10px]" x-text="item.time + ' ' + (item.date || '')"></td>
+                                        <td class="p-3 text-center">
+                                            <div class="inline-flex items-center gap-2">
+                                                <button type="button" @click="adminApproveRequest(item)" title="Duyệt đơn: Kích hoạt quyền và lưu lịch sử" class="w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black flex items-center justify-center transition-all shadow-lg shadow-emerald-500/30">
+                                                    <i data-lucide="check" class="w-5 h-5 stroke-[3]"></i>
+                                                </button>
+                                                
+                                                <button type="button" @click="adminRejectRequest(item)" title="Từ chối/hủy đơn và lưu vết từ chối" class="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-400 text-white font-black flex items-center justify-center transition-all shadow-lg shadow-red-500/30">
+                                                    <i data-lucide="x" class="w-5 h-5 stroke-[3]"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+
+                <!-- Phân trang tab Chờ duyệt -->
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <span class="text-slate-400 text-[11px]">Trang <strong class="text-white" x-text="adminPage"></strong> / <span x-text="totalAdminPages"></span></span>
+                    <div class="flex gap-2">
+                        <button type="button" @click="if (adminPage > 1) adminPage--" :disabled="adminPage <= 1" class="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 disabled:opacity-40">Trước</button>
+                        <button type="button" @click="if (adminPage < totalAdminPages) adminPage++" :disabled="adminPage >= totalAdminPages" class="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 disabled:opacity-40">Sau</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: LỊCH SỬ CÁC ĐƠN ĐÃ DUYỆT THÀNH CÔNG -->
+            <div x-show="adminTab === 'approved'" class="space-y-3">
+                <div class="overflow-y-auto max-h-[50vh] custom-scroll pr-1 border border-slate-800/80 rounded-2xl bg-slate-950/40">
+                    <template x-if="approvedRequestsList.length === 0">
+                        <div class="text-center py-16 text-xs text-slate-500">
+                            Chưa có đơn hàng nào được duyệt thành công.
+                        </div>
+                    </template>
+
+                    <template x-if="approvedRequestsList.length > 0">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="sticky top-0 bg-slate-900/95 backdrop-blur-md text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">Mã Giao Dịch</th>
+                                    <th class="p-3">Người Nạp</th>
+                                    <th class="p-3">Gói Dịch Vụ</th>
+                                    <th class="p-3 text-right">Số Tiền Đã Nhận</th>
+                                    <th class="p-3 text-center">Thời Gian Duyệt</th>
+                                    <th class="p-3 text-center">Trạng Thái</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 font-sans">
+                                <template x-for="item in paginatedApprovedRequests" :key="item.id">
+                                    <tr class="hover:bg-slate-900/60 transition-colors">
+                                        <td class="p-3 font-mono font-bold text-emerald-400" x-text="item.id"></td>
+                                        <td class="p-3">
+                                            <div class="font-bold text-white text-xs" x-text="item.userName"></div>
+                                            <div class="text-[10px] text-slate-400 font-mono" x-text="item.userId + ' • ' + item.userEmail"></div>
+                                        </td>
+                                        <td class="p-3 font-semibold text-slate-300" x-text="item.title"></td>
+                                        <td class="p-3 text-right font-mono font-black text-emerald-400 text-sm" x-text="item.price.toLocaleString('vi-VN') + 'đ'"></td>
+                                        <td class="p-3 text-center text-slate-400 text-[10px]" x-text="item.time"></td>
+                                        <td class="p-3 text-center">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                                                <i data-lucide="check" class="w-3 h-3"></i> Đã kích hoạt
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+
+                <!-- Phân trang tab Đã duyệt -->
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <span class="text-slate-400 text-[11px]">Trang <strong class="text-white" x-text="adminApprovedPage"></strong> / <span x-text="totalAdminApprovedPages"></span></span>
+                    <div class="flex gap-2">
+                        <button type="button" @click="if (adminApprovedPage > 1) adminApprovedPage--" :disabled="adminApprovedPage <= 1" class="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 disabled:opacity-40">Trước</button>
+                        <button type="button" @click="if (adminApprovedPage < totalAdminApprovedPages) adminApprovedPage++" :disabled="adminApprovedPage >= totalAdminApprovedPages" class="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 disabled:opacity-40">Sau</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: BẢNG TỔNG DOANH THU THEO TỪNG THÁNG -->
+            <div x-show="adminTab === 'revenue'" class="space-y-4">
+                <div class="overflow-y-auto max-h-[50vh] custom-scroll pr-1 border border-slate-800/80 rounded-2xl bg-slate-950/40">
+                    <template x-if="monthlyRevenueStats.length === 0">
+                        <div class="text-center py-16 text-xs text-slate-500">
+                            Chưa có dữ liệu doanh thu tháng nào được duyệt.
+                        </div>
+                    </template>
+
+                    <template x-if="monthlyRevenueStats.length > 0">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="sticky top-0 bg-slate-900/95 backdrop-blur-md text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3">Chu Kỳ Tháng</th>
+                                    <th class="p-3 text-center">Tổng Số Đơn Thành Công</th>
+                                    <th class="p-3 text-right">Tổng Doanh Thu Thực Nhận</th>
+                                    <th class="p-3 text-center">Tỷ Trọng Doanh Thu</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 font-sans">
+                                <template x-for="stat in monthlyRevenueStats" :key="stat.monthYear">
+                                    <tr class="hover:bg-slate-900/60 transition-colors">
+                                        <td class="p-3 font-bold text-white text-sm flex items-center gap-2">
+                                            <i data-lucide="calendar" class="w-4 h-4 text-cyan-400"></i>
+                                            <span x-text="stat.monthYear"></span>
+                                        </td>
+                                        <td class="p-3 text-center font-mono font-bold text-cyan-300 text-sm">
+                                            <span x-text="stat.count + ' đơn'"></span>
+                                        </td>
+                                        <td class="p-3 text-right font-mono font-black text-emerald-400 text-base" x-text="stat.total.toLocaleString('vi-VN') + ' VNĐ'"></td>
+                                        <td class="p-3 text-center">
+                                            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold text-xs"
+                                                  x-text="totalSystemRevenue > 0 ? ((stat.total / totalSystemRevenue) * 100).toFixed(1) + '%' : '0%'"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="pt-3 border-t border-slate-800 flex justify-end">
+                <button @click="openAdminModal = false" class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition-all">
+                    Đóng Bảng Quản Trị
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xác thực Auth -->
+    <div x-show="openAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" x-transition.opacity>
+        <div @click.away="openAuthModal = false" class="glass-panel max-w-md w-full p-6 rounded-2xl border border-slate-700 space-y-6 relative">
+            <button @click="openAuthModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+
+            <div class="flex border-b border-slate-800 pb-2">
+                <button @click="authTab = 'login'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': authTab === 'login', 'text-slate-400 hover:text-slate-200': authTab !== 'login' }" class="flex-1 text-center pb-2 text-base font-semibold transition-all">Đăng Nhập</button>
+                <button @click="authTab = 'register'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': authTab === 'register', 'text-slate-400 hover:text-slate-200': authTab !== 'register' }" class="flex-1 text-center pb-2 text-base font-semibold transition-all">Tạo Tài Khoản</button>
+            </div>
+
+            <form x-show="authTab === 'login'" @submit.prevent="handleLogin($event)" class="space-y-4">
+                <div class="space-y-1 text-left">
+                    <label class="text-xs text-slate-300 font-medium">Email sinh viên</label>
+                    <input type="email" name="email" placeholder="student@hust.edu.vn" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="space-y-1 text-left">
+                    <label class="text-xs text-slate-300 font-medium">Mật Khẩu</label>
+                    <input type="password" name="password" placeholder="••••••••" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20">ĐĂNG NHẬP NGAY</button>
+            </form>
+
+            <form x-show="authTab === 'register'" @submit.prevent="handleRegister($event)" class="space-y-4">
+                <div class="space-y-1 text-left">
+                    <label class="text-xs text-slate-300 font-medium">Họ và Tên</label>
+                    <input type="text" name="name" placeholder="Nguyễn Văn A" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="space-y-1 text-left">
+                    <label class="text-xs text-slate-300 font-medium">Email sinh viên</label>
+                    <input type="email" name="email" placeholder="student@gmail.com" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="space-y-1 text-left">
+                    <label class="text-xs text-slate-300 font-medium">Mật Khẩu (Tối thiểu 8 ký tự)</label>
+                    <input type="password" name="password" placeholder="••••••••" minlength="8" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20">TẠO TÀI KHOẢN MỚI</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-8 text-center text-xs text-slate-500">
+        <p>© 2026 Vua Giải Tích - Nền tảng ôn thi tự động.</p>
+    </footer>
+
+    <!-- Nút Chat Messenger Trôi Nổi (Góc Dưới Bên Phải) -->
+    <a href="https://m.me/kieu.an.396439" 
+       target="_blank" 
+       rel="noopener noreferrer" 
+       title="Hỗ trợ qua Messenger (Kieu Nguyen An)"
+       class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white font-bold text-xs shadow-2xl shadow-blue-500/30 hover:shadow-cyan-500/50 hover:scale-105 transition-all duration-300 border border-white/20 group">
+        <div class="relative flex items-center justify-center">
+            <svg class="w-6 h-6 fill-current text-white drop-shadow-md group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                <path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.914 1.455 5.518 3.735 7.208V22l3.373-1.853c.917.255 1.89.394 2.892.394 5.523 0 10-4.145 10-9.283C22 6.145 17.523 2 12 2zm1.066 12.443l-2.581-2.753-5.04 2.753 5.545-5.887 2.646 2.753 4.975-2.753-5.545 5.887z"/>
+            </svg>
+            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-900 animate-pulse"></span>
+        </div>
+        <div class="flex flex-col text-left leading-tight">
+            <span class="text-[10px] text-cyan-200 uppercase tracking-wider font-mono">Hỗ trợ 24/7</span>
+            <span class="text-xs font-black">Chat Messenger</span>
+        </div>
+    </a>
+
+    <!-- LOGIC TOAST & COUNTDOWN -->
+    <script>
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl glass-panel border text-xs font-semibold flex items-center gap-2 shadow-2xl transition-all duration-300 transform translate-y-10 opacity-0 ${
+                type === 'success' ? 'border-emerald-500/40 text-emerald-300 bg-emerald-950/80' : 'border-red-500/40 text-red-300 bg-red-950/80'
+            }`;
+            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i> ${message}`;
+            document.body.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 100);
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 3000);
+            }, 3000);
+        }
+
+        function startWeeklyCountdownVN() {
+            function updateClock() {
+                const now = new Date();
+                const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                const vnTime = new Date(utc + (3600000 * 7));
+
+                const dayOfWeek = vnTime.getDay();
+                let daysUntilNextMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
+
+                const nextMonday = new Date(vnTime);
+                nextMonday.setDate(vnTime.getDate() + daysUntilNextMonday);
+                nextMonday.setHours(0, 0, 0, 0);
+
+                let distance = nextMonday.getTime() - vnTime.getTime();
+                if (distance <= 0) distance = 7 * 24 * 60 * 60 * 1000;
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                const elDays = document.getElementById('cd-days');
+                if (elDays) {
+                    document.getElementById('cd-days').innerText = days < 10 ? '0' + days : days;
+                    document.getElementById('cd-hours').innerText = hours < 10 ? '0' + hours : hours;
+                    document.getElementById('cd-minutes').innerText = minutes < 10 ? '0' + minutes : minutes;
+                    document.getElementById('cd-seconds').innerText = seconds < 10 ? '0' + seconds : seconds;
+                }
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+            startWeeklyCountdownVN();
+        });
+    </script>
+    <script src="questions.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
