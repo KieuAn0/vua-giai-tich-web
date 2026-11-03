@@ -11,6 +11,13 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors());
+// Phục vụ các file tĩnh (HTML, JS, CSS)
+app.use(express.static(__dirname));
+
+// THÊM ĐOẠN NÀY ĐỂ FIX LỖI "Cannot GET /":
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
 
 // Kết nối MongoDB
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/vua_giai_tich';
