@@ -450,7 +450,7 @@
 
             if (!this.user.usedGiftcodes) this.user.usedGiftcodes = []; 
 
-            if (code === 'KIEUNGUYENANCUTEPHOMAIQUE') {
+           if (code === 'KIEUNGUYENANCUTEPHOMAIQUE') {
                 if (this.user.usedGiftcodes.includes(code)) {
                     showToast('Tài khoản của bạn đã sử dụng mã code này rồi!', 'error'); 
                     return;
@@ -466,7 +466,30 @@
                 this.inputGiftcode = ''; 
                 this.openGiftcodeModal = false; 
                 showToast('Nhập code thành công: Bạn được +1 lượt thi thử FREE!', 'success');
-            } else {
+            } 
+            else if (code === 'MEE1-02MAIDINH') {
+                if (this.user.usedGiftcodes.includes(code)) {
+                    showToast('Tài khoản của bạn đã sử dụng mã code này rồi!', 'error'); 
+                    return;
+                }
+
+                // Cộng hạn dùng vé tháng (30 ngày = 30 * 24 * 60 * 60 * 1000 ms)
+                const now = Date.now();
+                const oneMonthMs = 30 * 24 * 60 * 60 * 1000;
+                const currentExpire = (this.user.vipExpireTimestamp && this.user.vipExpireTimestamp > now) ? this.user.vipExpireTimestamp : now;
+                
+                this.user.vipExpireTimestamp = currentExpire + oneMonthMs;
+                this.user.usedGiftcodes.push(code);
+
+                const db = this.getAccountsDB(); 
+                db[this.user.email] = this.user; 
+                this.saveAccountsDB(db); 
+
+                this.inputGiftcode = ''; 
+                this.openGiftcodeModal = false; 
+                showToast('Kích hoạt thành công: Bạn nhận được 1 Vé Tháng FREE!', 'success');
+            } 
+            else {
                 showToast('Mã code không chính xác hoặc đã hết hạn!', 'error');
             }
         }, 
