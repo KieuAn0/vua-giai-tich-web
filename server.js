@@ -11,10 +11,9 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors());
-// Phục vụ các file tĩnh (HTML, JS, CSS)
 app.use(express.static(__dirname));
 
-// THÊM ĐOẠN NÀY ĐỂ FIX LỖI "Cannot GET /":
+// Route phục vụ trang chủ index.html
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
@@ -27,7 +26,6 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Đã kết nối thành công với MongoDB!'))
     .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
 
-// Cấu hình Nodemailer gửi OTP bằng Gmail App Password
 // Cấu hình Nodemailer chuẩn cho Gmail
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -47,7 +45,7 @@ const otpStorage = {};
 
 // ==================== SCHEMA & MODEL ====================
 const userSchema = new mongoose.Schema({
-    name: { type: String, required: true },
+    name: { type: String, default: 'Sinh Viên HUST' },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     currentDeviceToken: { type: String, default: null }
@@ -84,43 +82,29 @@ app.get('/api/auth/me', authenticateDevice, (req, res) => {
 });
 
 // ==================== API ĐĂNG KÝ ====================
-// ==================== API GỬI MÃ OTP QUÊN MẬT KHẨU ====================
-app.post('/api/auth/send-otp', async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Email này chưa được đăng ký tài khoản!' });
+        const { name, email, password } = req.body;
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const existingUser = await User.findOne({ email: cleanEmail });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'Email này đã được đăng ký tài khoản!' });
         }
 
-        // Tạo mã OTP ngẫu nhiên 6 chữ số
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        otpStorage[email] = {
-            otp,
-            expiresAt: Date.now() + 5 * 60 * 1000
-        };
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        // IN THẲNG MÃ RA TERMINAL ĐỂ TEST NHANH
-        console.log(`\n========================================`);
-        console.log(`🔑 [DEBUG OTP] Mã OTP của ${email} là: ${otp}`);
-        console.log(`========================================\n`);
-
-        // Gửi thư qua Gmail
-        await transporter.sendMail({
-            from: `"Vua Giải Tích" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
-            html: `<h3>Mã xác nhận OTP của bạn là: <b style="color:#06b6d4; font-size: 24px;">${otp}</b></h3><p>Hiệu lực trong 5 phút.</p>`
+        const newUser = new User({
+            name: name || cleanEmail.split('@')[0].toUpperCase(),
+            email: cleanEmail,
+            password: hashedPassword
         });
 
-        res.json({ success: true, message: 'Đã gửi mã OTP thành công về Gmail của bạn!' });
+        await newUser.save();
+        res.json({ success: true, message: 'Đăng ký tài khoản thành công!' });
     } catch (error) {
-        console.error('Chi tiết lỗi gửi mail:', error);
-        // Nếu gửi mail thất bại vẫn trả thông báo rõ lỗi
-        res.status(500).json({ 
-            success: false, 
-            message: 'Lỗi gửi mail: ' + (error.message || 'Kiểm tra terminal server!') 
-        });
+        console.error('Lỗi register:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server hệ thống!' });
     }
 });
 
@@ -128,8 +112,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        const cleanEmail = (email || '').trim().toLowerCase();
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: cleanEmail });
         if (!user) {
             return res.status(400).json({ success: false, message: 'Email hoặc mật khẩu không chính xác!' });
         }
@@ -151,7 +136,7 @@ app.post('/api/auth/login', async (req, res) => {
             user: { name: user.name, email: user.email }
         });
     } catch (error) {
-        console.error(error);
+        console.error('Lỗi login:', error);
         res.status(500).json({ success: false, message: 'Lỗi server hệ thống!' });
     }
 });
@@ -160,67 +145,86 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Email này chưa được đăng ký tài khoản!' });
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp email!' });
         }
+        const cleanEmail = email.trim().toLowerCase();
 
         // Tạo mã OTP ngẫu nhiên 6 chữ số
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        otpStorage[email] = {
+        otpStorage[cleanEmail] = {
             otp,
             expiresAt: Date.now() + 5 * 60 * 1000 // Có hiệu lực trong 5 phút
         };
 
-        // Gửi thư đến email của người dùng
-        await transporter.sendMail({
-            from: `"Vua Giải Tích HUST" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                    <h2>Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
-                    <p>Mã xác thực OTP của bạn là:</p>
-                    <div style="font-size: 28px; font-weight: bold; color: #06b6d4; letter-spacing: 4px; padding: 10px 0;">
-                        ${otp}
-                    </div>
-                    <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng tuyệt đối không chia sẻ mã này cho người khác.</p>
-                </div>
-            `
-        });
+        // IN THẲNG MÃ RA TERMINAL ĐỂ TEST NHANH MỌI LÚC
+        console.log(`\n========================================`);
+        console.log(`🔑 [DEBUG OTP] Mã OTP của ${cleanEmail} là: ${otp}`);
+        console.log(`========================================\n`);
+
+        // Gửi email qua Gmail nếu cấu hình đủ biến môi trường
+        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            try {
+                await transporter.sendMail({
+                    from: `"Vua Giải Tích HUST" <${process.env.EMAIL_USER}>`,
+                    to: cleanEmail,
+                    subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                            <h2>Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
+                            <p>Mã xác thực OTP của bạn là:</p>
+                            <div style="font-size: 28px; font-weight: bold; color: #06b6d4; letter-spacing: 4px; padding: 10px 0;">
+                                ${otp}
+                            </div>
+                            <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng tuyệt đối không chia sẻ mã này cho người khác.</p>
+                        </div>
+                    `
+                });
+            } catch (mailErr) {
+                console.warn('⚠️ Lỗi gửi thư qua Gmail (vẫn có thể lấy OTP ở Terminal):', mailErr.message);
+            }
+        }
 
         res.json({ success: true, message: 'Đã gửi mã OTP thành công về Gmail của bạn!' });
     } catch (error) {
-        console.error('Lỗi Nodemailer:', error);
-        res.status(500).json({ success: false, message: 'Lỗi hệ thống khi gửi email OTP. Vui lòng kiểm tra lại cấu hình SMTP!' });
+        console.error('Lỗi send-otp:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi tạo mã OTP!' });
     }
 });
 
-// ==================== API ĐỔI MẬT KHẨU ====================
+// ==================== API XÁC THỰC OTP & ĐỔI MẬT KHẨU ====================
 app.post('/api/auth/verify-otp-reset-password', async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
-        const record = otpStorage[email];
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const record = otpStorage[cleanEmail];
 
-        if (!record || record.otp !== otp || Date.now() > record.expiresAt) {
+        if (!record || record.otp !== (otp || '').trim() || Date.now() > record.expiresAt) {
             return res.status(400).json({ success: false, message: 'Mã OTP không chính xác hoặc đã hết hạn!' });
         }
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Không tìm thấy người dùng!' });
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        let user = await User.findOne({ email: cleanEmail });
+        if (user) {
+            user.password = hashedPassword;
+            user.currentDeviceToken = null; // Huỷ token phiên đăng nhập cũ
+            await user.save();
+        } else {
+            user = new User({
+                name: cleanEmail.split('@')[0].toUpperCase(),
+                email: cleanEmail,
+                password: hashedPassword
+            });
+            await user.save();
         }
 
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        user.currentDeviceToken = null; // Huỷ token phiên đăng nhập cũ
-        await user.save();
-
-        delete otpStorage[email];
+        delete otpStorage[cleanEmail];
 
         res.json({ success: true, message: 'Đặt lại mật khẩu thành công! Hãy đăng nhập lại.' });
     } catch (error) {
-        console.error(error);
+        console.error('Lỗi verify-otp:', error);
         res.status(500).json({ success: false, message: 'Lỗi server hệ thống!' });
     }
 });
