@@ -62,9 +62,12 @@
         openAdminModal: false, 
         authTab: 'login', 
         inputGiftcode: '', 
+        forgotEmail: '',
+        forgotOtp: '',
+        newPassword: '',
+        step: 1,
 
-        // QUẢN TRỊ ADMIN: Tab, dữ liệu & phân trang
-        adminTab: 'pending', // 'pending' | 'approved' | 'revenue'
+        adminTab: 'pending',
         allRequestsList: [],
         approvedRequestsList: [],
         adminPage: 1,
@@ -190,7 +193,6 @@
             localStorage.setItem('vgt_accounts', JSON.stringify(db));
         }, 
 
-        // Load cả đơn chờ duyệt và đơn đã duyệt thành công
         loadAdminRequests() {
             const db = this.getAccountsDB();
             let pendingList = [];
@@ -228,7 +230,6 @@
             this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
         },
 
-        // Phân trang đơn chờ duyệt
         get paginatedRequests() {
             const start = (this.adminPage - 1) * this.adminPageSize;
             return this.allRequestsList.slice(start, start + this.adminPageSize);
@@ -239,7 +240,6 @@
             return Math.ceil(total / this.adminPageSize) || 1;
         },
 
-        // Phân trang đơn đã duyệt
         get paginatedApprovedRequests() {
             const start = (this.adminApprovedPage - 1) * this.adminPageSize;
             return this.approvedRequestsList.slice(start, start + this.adminPageSize);
@@ -250,7 +250,6 @@
             return Math.ceil(total / this.adminPageSize) || 1;
         },
 
-        // Thống kê doanh thu theo tháng
         get monthlyRevenueStats() {
             const stats = {};
             this.approvedRequestsList.forEach(item => {
@@ -278,7 +277,6 @@
             return Object.values(stats);
         },
 
-        // Tổng doanh thu toàn bộ hệ thống
         get totalSystemRevenue() {
             return this.approvedRequestsList.reduce((sum, item) => sum + (parseInt(item.price) || 0), 0);
         },
@@ -311,7 +309,6 @@
             }
             this.saveAccountsDB(db);
 
-            // Cập nhật cả 2 danh sách tại admin
             this.allRequestsList = this.allRequestsList.filter(r => r.id !== reqItem.id);
             this.approvedRequestsList.unshift({
                 ...reqItem,
@@ -358,11 +355,6 @@
             this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
             showToast('Đã từ chối đơn ' + reqItem.id + ' của ' + acc.name + '!', 'error');
         },
-
-        forgotEmail: '', 
-        forgotOtp: '', 
-        newPassword: '', 
-        step: 1, 
 
         examSubject: '', 
         examCode: '', 
@@ -736,7 +728,74 @@
             this.openAuthModal = false; 
             this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
             showToast('Chào mừng trở lại, ' + this.user.name + ' (Mã: ' + this.user.id + ')!', 'success');
-        }, 
+        },
+
+        async handleSendOtp() {
+            if (!this.forgotEmail) {
+                showToast('Vui lòng nhập Email!', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: this.forgotEmail })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    this.step = 2;
+                    setTimeout(() => {
+                        const firstInput = document.getElementById('otp-0');
+                        if (firstInput) firstInput.focus();
+                    }, 150);
+                } else {
+                    showToast(data.message || 'Không thể gửi OTP!', 'error');
+                }
+            } catch (err) {
+                showToast('Lỗi kết nối đến server!', 'error');
+            }
+        },
+
+        async handleResetPassword() {
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                const el = document.getElementById('otp-' + i);
+                if (el) code += el.value.trim();
+            }
+            this.forgotOtp = code;
+
+            if (this.forgotOtp.length < 6) {
+                showToast('Vui lòng nhập đủ 6 số OTP!', 'error');
+                return;
+            }
+
+            if (this.newPassword.length < 8) {
+                showToast('Mật khẩu mới tối thiểu 8 ký tự!', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/auth/verify-otp-reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: this.forgotEmail, otp: this.forgotOtp, newPassword: this.newPassword })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    this.authTab = 'login';
+                    this.step = 1;
+                    this.forgotEmail = '';
+                    this.forgotOtp = '';
+                    this.newPassword = '';
+                } else {
+                    showToast(data.message || 'Mã OTP không chính xác!', 'error');
+                }
+            } catch (err) {
+                showToast('Lỗi kết nối đến server!', 'error');
+            }
+        },
 
         logout() {
             localStorage.removeItem('vgt_current_session'); 
@@ -818,7 +877,6 @@
                 <template x-if="isLoggedIn">
                     <div class="flex items-center gap-2.5">
                         
-                        <!-- Khung hiển thị Lượt thi / VIP đếm ngược -->
                         <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all"
                              :class="isVipMember() ? (currentTier === 'Thành viên kỳ' ? 'bg-purple-500/10 border-purple-500/30 text-purple-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300') : 'bg-slate-800/90 border-slate-700 text-slate-300'">
                             
@@ -940,10 +998,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                        <i data-lucide="book-open" class="text-cyan-400"></i> Phòng Thi Thử Giữa Kỳ Theo Mã Học Phần 
-                    </h2>
-                    <h2 class="text-1xl font-bold text-white flex items-center gap-2">
-                         * sau khi thi xong sẽ update thi thử cuối kỳ tự luận có giảng viên chấm nha ae (sẽ live stream chữa đề trực tiếp)
+                        <i data-lucide="book-open" class="text-cyan-400"></i> Phòng Thi Thử Giữa Kỳ Theo Mã Học Phần
                     </h2>
                     <p class="text-sm text-slate-400">Chọn đúng mã lớp theo chương trình đào tạo để hiển thị chính xác độ khó, ngôn ngữ và bộ đề riêng</p>
                 </div>
@@ -1469,7 +1524,7 @@
         </div>
     </div>
 
-    <!-- MODAL BẢNG QUẢN TRỊ VIÊN: ĐẦY ĐỦ 3 TAB DUYỆT ĐƠN, LỊCH SỬ ĐÃ DUYỆT & DOANH THU THÁNG -->
+    <!-- MODAL BẢNG QUẢN TRỊ VIÊN -->
     <div x-show="openAdminModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md" x-transition.opacity>
         <div @click.away="openAdminModal = false" class="glass-panel max-w-5xl w-full p-6 rounded-3xl border border-emerald-500/40 space-y-4 relative shadow-2xl max-h-[92vh] flex flex-col justify-between">
             <button @click="openAdminModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -1695,16 +1750,17 @@
         </div>
     </div>
 
-    <!-- Modal Xác thực Auth -->
+    <!-- Modal Xác thực Auth (Đăng nhập / Đăng ký / Quên mật khẩu) -->
     <div x-show="openAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" x-transition.opacity>
         <div @click.away="openAuthModal = false" class="glass-panel max-w-md w-full p-6 rounded-2xl border border-slate-700 space-y-6 relative">
             <button @click="openAuthModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
 
-            <div class="flex border-b border-slate-800 pb-2">
+            <div x-show="authTab !== 'forgot'" class="flex border-b border-slate-800 pb-2">
                 <button @click="authTab = 'login'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': authTab === 'login', 'text-slate-400 hover:text-slate-200': authTab !== 'login' }" class="flex-1 text-center pb-2 text-base font-semibold transition-all">Đăng Nhập</button>
                 <button @click="authTab = 'register'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': authTab === 'register', 'text-slate-400 hover:text-slate-200': authTab !== 'register' }" class="flex-1 text-center pb-2 text-base font-semibold transition-all">Tạo Tài Khoản</button>
             </div>
 
+            <!-- Đăng Nhập -->
             <form x-show="authTab === 'login'" @submit.prevent="handleLogin($event)" class="space-y-4">
                 <div class="space-y-1 text-left">
                     <label class="text-xs text-slate-300 font-medium">Email sinh viên</label>
@@ -1714,9 +1770,83 @@
                     <label class="text-xs text-slate-300 font-medium">Mật Khẩu</label>
                     <input type="password" name="password" placeholder="••••••••" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
                 </div>
+                <!-- NÚT QUÊN MẬT KHẨU -->
+                <div class="text-right pt-0.5">
+                    <button type="button" @click="authTab = 'forgot'; step = 1" class="text-xs text-cyan-400 hover:underline font-medium">Quên mật khẩu?</button>
+                </div>
                 <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20">ĐĂNG NHẬP NGAY</button>
             </form>
 
+            <!-- GIAO DIỆN QUÊN MẬT KHẨU VỚI 6 Ô OTP -->
+            <div x-show="authTab === 'forgot'" x-data="{ showPass: false }" class="space-y-5">
+                <div class="text-center space-y-1.5">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+                        <i :data-lucide="step === 1 ? 'mail-question' : 'shield-check'" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-white" x-text="step === 1 ? 'Khôi Phục Mật Khẩu' : 'Xác Thực & Tạo Mật Khẩu'"></h3>
+                    <p class="text-xs text-slate-400 max-w-xs mx-auto" 
+                       x-text="step === 1 ? 'Nhập email sinh viên để nhận mã bảo mật OTP 6 chữ số.' : 'Nhập mã OTP vừa gửi tới ' + forgotEmail + ' và thiết lập mật khẩu mới.'"></p>
+                </div>
+
+                <!-- BƯỚC 1: NHẬP EMAIL -->
+                <div x-show="step === 1" class="space-y-4">
+                    <div class="space-y-1.5 text-left">
+                        <label class="text-xs font-semibold text-slate-300">Email đã đăng ký</label>
+                        <div class="relative">
+                            <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="email" x-model="forgotEmail" placeholder="student@gmail.com" required 
+                                   class="w-full pl-9 pr-3 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+                        </div>
+                    </div>
+                    <button type="button" @click="handleSendOtp()" 
+                            class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 font-bold text-xs text-slate-950 rounded-xl transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i> GỬI MÃ OTP QUA GMAIL
+                    </button>
+                </div>
+
+                <!-- BƯỚC 2: 6 Ô OTP & MẬT KHẨU MỚI -->
+                <div x-show="step === 2" class="space-y-5">
+                    <div class="space-y-2 text-left">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-slate-300">Mã xác thực OTP (6 số)</label>
+                            <button type="button" @click="handleSendOtp()" class="text-[11px] text-cyan-400 hover:underline">Gửi lại mã?</button>
+                        </div>
+                        <div class="grid grid-cols-6 gap-2" onpaste="handleOtpPaste(event)">
+                            <input type="text" id="otp-0" maxlength="1" inputmode="numeric" oninput="jumpNext(this, 'otp-1')" onkeydown="jumpBack(event, this, null)" class="otp-box h-12 text-center text-xl font-black font-mono text-cyan-400 bg-slate-950/80 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all">
+                            <input type="text" id="otp-1" maxlength="1" inputmode="numeric" oninput="jumpNext(this, 'otp-2')" onkeydown="jumpBack(event, this, 'otp-0')" class="otp-box h-12 text-center text-xl font-black font-mono text-cyan-400 bg-slate-950/80 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all">
+                            <input type="text" id="otp-2" maxlength="1" inputmode="numeric" oninput="jumpNext(this, 'otp-3')" onkeydown="jumpBack(event, this, 'otp-1')" class="otp-box h-12 text-center text-xl font-black font-mono text-cyan-400 bg-slate-950/80 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all">
+                            <input type="text" id="otp-3" maxlength="1" inputmode="numeric" oninput="jumpNext(this, 'otp-4')" onkeydown="jumpBack(event, this, 'otp-2')" class="otp-box h-12 text-center text-xl font-black font-mono text-cyan-400 bg-slate-950/80 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all">
+                            <input type="text" id="otp-4" maxlength="1" inputmode="numeric" oninput="jumpNext(this, 'otp-5')" onkeydown="jumpBack(event, this, 'otp-3')" class="otp-box h-12 text-center text-xl font-black font-mono text-cyan-400 bg-slate-950/80 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all">
+                            <input type="text" id="otp-5" maxlength="1" inputmode="numeric" oninput="jumpNext(this, null)" onkeydown="jumpBack(event, this, 'otp-4')" class="otp-box h-12 text-center text-xl font-black font-mono text-cyan-400 bg-slate-950/80 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 text-left">
+                        <label class="text-xs font-semibold text-slate-300">Mật khẩu mới</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input :type="showPass ? 'text' : 'password'" x-model="newPassword" placeholder="Tối thiểu 8 ký tự" minlength="8" required
+                                   class="w-full pl-9 pr-10 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+                            <button type="button" @click="showPass = !showPass" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
+                                <i :data-lucide="showPass ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" @click="handleResetPassword()" 
+                            class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 font-bold text-xs text-slate-950 rounded-xl transition-all shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> XÁC NHẬN ĐỔI MẬT KHẨU
+                    </button>
+                </div>
+
+                <div class="text-center pt-2">
+                    <button type="button" @click="authTab = 'login'; step = 1" class="text-xs text-slate-400 hover:text-cyan-400 inline-flex items-center gap-1 transition-colors">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Quay lại Đăng Nhập
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Đăng Ký -->
             <form x-show="authTab === 'register'" @submit.prevent="handleRegister($event)" class="space-y-4">
                 <div class="space-y-1 text-left">
                     <label class="text-xs text-slate-300 font-medium">Họ và Tên</label>
@@ -1758,8 +1888,43 @@
         </div>
     </a>
 
-    <!-- LOGIC TOAST & COUNTDOWN -->
+    <!-- LOGIC TOAST & COUNTDOWN & OTP JUMP -->
     <script>
+        function jumpNext(current, nextId) {
+            current.value = current.value.replace(/[^0-9]/g, '');
+            if (current.value.length >= 1 && nextId) {
+                const nextElem = document.getElementById(nextId);
+                if (nextElem) {
+                    nextElem.focus();
+                    nextElem.select();
+                }
+            }
+        }
+
+        function jumpBack(e, current, prevId) {
+            if (e.key === 'Backspace') {
+                if (!current.value && prevId) {
+                    const prevElem = document.getElementById(prevId);
+                    if (prevElem) {
+                        prevElem.focus();
+                        prevElem.value = '';
+                    }
+                }
+            }
+        }
+
+        function handleOtpPaste(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+            for (let i = 0; i < 6; i++) {
+                const el = document.getElementById('otp-' + i);
+                if (el) el.value = paste[i] || '';
+            }
+            const nextIndex = Math.min(paste.length, 5);
+            const target = document.getElementById('otp-' + nextIndex);
+            if (target) target.focus();
+        }
+
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl glass-panel border text-xs font-semibold flex items-center gap-2 shadow-2xl transition-all duration-300 transform translate-y-10 opacity-0 ${
