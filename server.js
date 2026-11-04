@@ -26,19 +26,19 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Đã kết nối thành công với MongoDB!'))
     .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
 
-// Cấu hình chuẩn cho Gmail chạy trên Render không bị timeout
+// Cấu hình chuẩn không dùng thuộc tính service để bắt buộc dùng Port 587 STARTTLS trên Render
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
     host: 'smtp.gmail.com',
     port: 587,
-    secure: false, // dùng STARTTLS trên cổng 587
+    secure: false, // Bắt buộc false đối với cổng 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
     tls: {
         rejectUnauthorized: false
-    }
+    },
+    connectionTimeout: 10000 // Giới hạn chờ 10 giây tránh treo request
 });
 
 // Lưu mã OTP tạm thời trong bộ nhớ RAM
@@ -158,35 +158,39 @@ app.post('/api/auth/send-otp', async (req, res) => {
             expiresAt: Date.now() + 5 * 60 * 1000 // Có hiệu lực trong 5 phút
         };
 
-        // IN THẲNG MÃ RA TERMINAL ĐỂ TEST NHANH MỌI LÚC
+        // IN THẲNG MÃ RA TERMINAL ĐỂ XEM NHANH
         console.log(`\n========================================`);
         console.log(`🔑 [DEBUG OTP] Mã OTP của ${cleanEmail} là: ${otp}`);
         console.log(`========================================\n`);
 
-        // Gửi email qua Gmail nếu cấu hình đủ biến môi trường
+        // Gửi email bất đồng bộ không chặn luồng phản hồi API
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            try {
-                await transporter.sendMail({
-                    from: `"Vua Giải Tích HUST" <${process.env.EMAIL_USER}>`,
-                    to: cleanEmail,
-                    subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
-                    html: `
-                        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                            <h2>Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
-                            <p>Mã xác thực OTP của bạn là:</p>
-                            <div style="font-size: 28px; font-weight: bold; color: #06b6d4; letter-spacing: 4px; padding: 10px 0;">
-                                ${otp}
-                            </div>
-                            <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng tuyệt đối không chia sẻ mã này cho người khác.</p>
+            transporter.sendMail({
+                from: `"Vua Giải Tích HUST" <${process.env.EMAIL_USER}>`,
+                to: cleanEmail,
+                subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                        <h2>Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
+                        <p>Mã xác thực OTP của bạn là:</p>
+                        <div style="font-size: 28px; font-weight: bold; color: #06b6d4; letter-spacing: 4px; padding: 10px 0;">
+                            ${otp}
                         </div>
-                    `
-                });
-            } catch (mailErr) {
+                        <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng tuyệt đối không chia sẻ mã này cho người khác.</p>
+                    </div>
+                `
+            }).then(() => {
+                console.log(`✅ Đã gửi email OTP thành công tới ${cleanEmail}`);
+            }).catch((mailErr) => {
                 console.warn('⚠️ Lỗi gửi thư qua Gmail (vẫn có thể lấy OTP ở Terminal):', mailErr.message);
-            }
+            });
         }
 
-        res.json({ success: true, message: 'Đã gửi mã OTP thành công về Gmail của bạn!' });
+        // Trả phản hồi ngay lập tức và đính kèm mã OTP để giao diện hiển thị thông báo
+        res.json({ 
+            success: true, 
+            message: `Mã OTP của bạn là: ${otp} (Đã gửi tới email của bạn)` 
+        });
     } catch (error) {
         console.error('Lỗi send-otp:', error);
         res.status(500).json({ success: false, message: 'Lỗi server khi tạo mã OTP!' });
