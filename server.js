@@ -3,20 +3,22 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { Resend } = require('resend');
+const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
 const app = express();
 
-// Khởi tạo Resend API (cổng HTTP 443 không bị Render chặn)
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Khởi tạo SendGrid API
+if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 app.use(express.static(__dirname));
 
-// Route trang chủ
+// Route phục vụ trang chủ
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
@@ -29,7 +31,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Đã kết nối thành công với MongoDB!'))
     .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
 
-// Bộ nhớ tạm lưu OTP
+// Bộ nhớ tạm lưu mã OTP
 const otpStorage = {};
 
 // ==================== SCHEMA & MODEL ====================
@@ -42,7 +44,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// Middleware xác thực token
+// Middleware kiểm tra tính hợp lệ của Token
 const authenticateDevice = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -62,7 +64,7 @@ const authenticateDevice = async (req, res, next) => {
     }
 };
 
-// API lấy thông tin người dùng
+// API: Lấy thông tin phiên hiện tại
 app.get('/api/auth/me', authenticateDevice, (req, res) => {
     res.json({
         success: true,
@@ -130,7 +132,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// ==================== API GỬI MÃ OTP (GỬI THƯ THẬT QUA RESEND) ====================
+// ==================== API GỬI MÃ OTP QUA SENDGRID ====================
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email } = req.body;
@@ -143,40 +145,45 @@ app.post('/api/auth/send-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         otpStorage[cleanEmail] = {
             otp,
-            expiresAt: Date.now() + 5 * 60 * 1000
+            expiresAt: Date.now() + 5 * 60 * 1000 // Hiệu lực 5 phút
         };
 
+        // IN THẲNG MÃ RA LOG ĐỂ DỄ DÀNG ĐỐI SOÁT
         console.log(`\n========================================`);
         console.log(`🔑 [DEBUG OTP] Mã OTP của ${cleanEmail} là: ${otp}`);
         console.log(`========================================\n`);
 
-        // Gửi email qua HTTP API của Resend
-        if (process.env.RESEND_API_KEY) {
-            const sendResult = await resend.emails.send({
-                from: 'Vua Giai Tich <onboarding@resend.dev>',
+        // Gửi email qua SendGrid HTTP API
+        if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL) {
+            const msg = {
                 to: cleanEmail,
+                from: {
+                    email: process.env.SENDGRID_FROM_EMAIL,
+                    name: 'Vua Giải Tích HUST'
+                },
                 subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
                 html: `
-                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                        <h2>Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; rounded: 12px;">
+                        <h2 style="color: #0891b2;">Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
                         <p>Mã xác thực OTP của bạn là:</p>
-                        <div style="font-size: 32px; font-weight: bold; color: #06b6d4; letter-spacing: 5px; padding: 12px 0;">
+                        <div style="font-size: 32px; font-weight: bold; color: #06b6d4; letter-spacing: 5px; padding: 12px 0; text-align: center; background: #f8fafc; border-radius: 8px;">
                             ${otp}
                         </div>
-                        <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng không chia sẻ mã này cho người khác.</p>
+                        <p style="margin-top: 15px; font-size: 13px; color: #64748b;">Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng tuyệt đối không chia sẻ mã này cho người khác.</p>
                     </div>
                 `
-            });
-            console.log('✅ Kết quả gửi mail qua Resend:', sendResult);
+            };
+
+            await sgMail.send(msg);
+            console.log(`✅ [SendGrid] Đã gửi thành công email OTP tới: ${cleanEmail}`);
+        } else {
+            console.warn('⚠️ Thiếu biến môi trường SENDGRID_API_KEY hoặc SENDGRID_FROM_EMAIL!');
         }
 
-        res.json({ 
-            success: true, 
-            message: 'Đã gửi mã OTP thành công về hộp thư của bạn!' 
-        });
+        res.json({ success: true, message: 'Đã gửi mã OTP thành công về hộp thư của bạn!' });
     } catch (error) {
-        console.error('Lỗi gửi OTP qua API:', error);
-        res.status(500).json({ success: false, message: 'Lỗi server khi gửi mail OTP!' });
+        console.error('Lỗi SendGrid:', error.response ? error.response.body : error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi gửi email OTP!' });
     }
 });
 
