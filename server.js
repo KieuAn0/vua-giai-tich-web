@@ -26,12 +26,18 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Đã kết nối thành công với MongoDB!'))
     .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
 
-// Cấu hình chuẩn chạy tốt trên Render (không bị chặn timeout)
+// Cấu hình chuẩn cho Gmail chạy trên Render không bị timeout
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // dùng STARTTLS trên cổng 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
