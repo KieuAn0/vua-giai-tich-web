@@ -67,7 +67,8 @@
         newPassword: '',
         step: 1,
 
-        adminTab: 'pending',
+        // QUẢN TRỊ ADMIN: Tab, dữ liệu & phân trang
+        adminTab: 'pending', // 'pending' | 'approved' | 'revenue'
         allRequestsList: [],
         approvedRequestsList: [],
         adminPage: 1,
@@ -639,7 +640,7 @@
             return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
         }, 
 
-        handleRegister(e) {
+        async handleRegister(e) {
             const form = e.target; 
             const name = form.querySelector('input[name=name]').value.trim(); 
             const email = form.querySelector('input[name=email]').value.trim().toLowerCase(); 
@@ -656,6 +657,15 @@
                 this.authTab = 'login'; 
                 return;
             }
+
+            // Đồng bộ đăng ký sang backend MongoDB
+            try {
+                await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+            } catch (err) {}
 
             const permanentId = 'VGT-' + Math.floor(100000 + Math.random() * 900000); 
             const newAccount = {
@@ -684,7 +694,7 @@
             showToast('Tạo tài khoản thành công! Mã sinh viên của bạn: ' + permanentId, 'success');
         }, 
 
-        handleLogin(e) {
+        async handleLogin(e) {
             const form = e.target; 
             const email = form.querySelector('input[name=email]').value.trim().toLowerCase(); 
             const password = form.querySelector('input[name=password]').value; 
@@ -736,10 +746,11 @@
                 return;
             }
             try {
+                showToast('Đang gửi mã OTP, vui lòng chờ...', 'info');
                 const res = await fetch('/api/auth/send-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: this.forgotEmail })
+                    body: JSON.stringify({ email: this.forgotEmail.trim().toLowerCase() })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -747,13 +758,17 @@
                     this.step = 2;
                     setTimeout(() => {
                         const firstInput = document.getElementById('otp-0');
-                        if (firstInput) firstInput.focus();
+                        if (firstInput) {
+                            firstInput.focus();
+                            firstInput.value = '';
+                        }
                     }, 150);
                 } else {
-                    showToast(data.message || 'Không thể gửi OTP!', 'error');
+                    showToast(data.message || 'Không thể gửi mã OTP!', 'error');
                 }
             } catch (err) {
-                showToast('Lỗi kết nối đến server!', 'error');
+                console.error(err);
+                showToast('Lỗi kết nối đến server backend!', 'error');
             }
         },
 
@@ -776,13 +791,25 @@
             }
 
             try {
+                const cleanEmail = this.forgotEmail.trim().toLowerCase();
                 const res = await fetch('/api/auth/verify-otp-reset-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: this.forgotEmail, otp: this.forgotOtp, newPassword: this.newPassword })
+                    body: JSON.stringify({ 
+                        email: cleanEmail, 
+                        otp: this.forgotOtp, 
+                        newPassword: this.newPassword 
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
+                    // Đồng bộ đổi mật khẩu trong localStorage
+                    const db = this.getAccountsDB();
+                    if (db[cleanEmail]) {
+                        db[cleanEmail].password = this.newPassword;
+                        this.saveAccountsDB(db);
+                    }
+
                     showToast(data.message, 'success');
                     this.authTab = 'login';
                     this.step = 1;
@@ -793,6 +820,7 @@
                     showToast(data.message || 'Mã OTP không chính xác!', 'error');
                 }
             } catch (err) {
+                console.error(err);
                 showToast('Lỗi kết nối đến server!', 'error');
             }
         },
@@ -876,7 +904,6 @@
 
                 <template x-if="isLoggedIn">
                     <div class="flex items-center gap-2.5">
-                        
                         <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all"
                              :class="isVipMember() ? (currentTier === 'Thành viên kỳ' ? 'bg-purple-500/10 border-purple-500/30 text-purple-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300') : 'bg-slate-800/90 border-slate-700 text-slate-300'">
                             
@@ -998,7 +1025,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                        <i data-lucide="book-open" class="text-cyan-400"></i> Phòng Thi Thử Giữa Kỳ Theo Mã Học Phần
+                        <i data-lucide="book-open" class="text-cyan-400"></i> Phòng Thi Thử Giữa Kỳ Theo Mã Học Phần 
+                    </h2>
+                    <h2 class="text-1xl font-bold text-white flex items-center gap-2">
+                         * sau khi thi xong sẽ update thi thử cuối kỳ tự luận có giảng viên chấm nha ae (sẽ live stream chữa đề trực tiếp)
                     </h2>
                     <p class="text-sm text-slate-400">Chọn đúng mã lớp theo chương trình đào tạo để hiển thị chính xác độ khó, ngôn ngữ và bộ đề riêng</p>
                 </div>
@@ -1760,7 +1790,7 @@
                 <button @click="authTab = 'register'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': authTab === 'register', 'text-slate-400 hover:text-slate-200': authTab !== 'register' }" class="flex-1 text-center pb-2 text-base font-semibold transition-all">Tạo Tài Khoản</button>
             </div>
 
-            <!-- Đăng Nhập -->
+            <!-- ĐĂNG NHẬP (Có nút Quên mật khẩu) -->
             <form x-show="authTab === 'login'" @submit.prevent="handleLogin($event)" class="space-y-4">
                 <div class="space-y-1 text-left">
                     <label class="text-xs text-slate-300 font-medium">Email sinh viên</label>
@@ -1770,9 +1800,8 @@
                     <label class="text-xs text-slate-300 font-medium">Mật Khẩu</label>
                     <input type="password" name="password" placeholder="••••••••" required class="w-full px-3 py-2 bg-slate-900/90 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500">
                 </div>
-                <!-- NÚT QUÊN MẬT KHẨU -->
                 <div class="text-right pt-0.5">
-                    <button type="button" @click="authTab = 'forgot'; step = 1" class="text-xs text-cyan-400 hover:underline font-medium">Quên mật khẩu?</button>
+                    <button type="button" @click="authTab = 'forgot'; step = 1; forgotEmail = ''" class="text-xs text-cyan-400 hover:underline font-medium">Quên mật khẩu?</button>
                 </div>
                 <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20">ĐĂNG NHẬP NGAY</button>
             </form>
@@ -1928,9 +1957,9 @@
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl glass-panel border text-xs font-semibold flex items-center gap-2 shadow-2xl transition-all duration-300 transform translate-y-10 opacity-0 ${
-                type === 'success' ? 'border-emerald-500/40 text-emerald-300 bg-emerald-950/80' : 'border-red-500/40 text-red-300 bg-red-950/80'
+                type === 'success' ? 'border-emerald-500/40 text-emerald-300 bg-emerald-950/80' : (type === 'info' ? 'border-cyan-500/40 text-cyan-300 bg-slate-900/90' : 'border-red-500/40 text-red-300 bg-red-950/80')
             }`;
-            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i> ${message}`;
+            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : (type === 'info' ? 'info' : 'alert-circle')}" class="w-4 h-4"></i> ${message}`;
             document.body.appendChild(toast);
             if (window.lucide) lucide.createIcons();
 
