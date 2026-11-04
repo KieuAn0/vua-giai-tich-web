@@ -3,17 +3,20 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
 
 const app = express();
+
+// Khởi tạo Resend API (cổng HTTP 443 không bị Render chặn)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Middleware
 app.use(express.json());
 app.use(cors());
 app.use(express.static(__dirname));
 
-// Route phục vụ trang chủ index.html
+// Route trang chủ
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
@@ -26,22 +29,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Đã kết nối thành công với MongoDB!'))
     .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
 
-// Cấu hình chuẩn không dùng thuộc tính service để bắt buộc dùng Port 587 STARTTLS trên Render
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Bắt buộc false đối với cổng 587
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    connectionTimeout: 10000 // Giới hạn chờ 10 giây tránh treo request
-});
-
-// Lưu mã OTP tạm thời trong bộ nhớ RAM
+// Bộ nhớ tạm lưu OTP
 const otpStorage = {};
 
 // ==================== SCHEMA & MODEL ====================
@@ -54,7 +42,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-// Middleware kiểm tra tính hợp lệ của Token và thiết bị đăng nhập
+// Middleware xác thực token
 const authenticateDevice = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -74,7 +62,7 @@ const authenticateDevice = async (req, res, next) => {
     }
 };
 
-// API: Lấy thông tin phiên hiện tại
+// API lấy thông tin người dùng
 app.get('/api/auth/me', authenticateDevice, (req, res) => {
     res.json({
         success: true,
@@ -109,7 +97,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-// ==================== API ĐĂNG NHẬP (1 THIẾT BỊ) ====================
+// ==================== API ĐĂNG NHẬP ====================
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -142,7 +130,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// ==================== API GỬI MÃ OTP QUÊN MẬT KHẨU ====================
+// ==================== API GỬI MÃ OTP (GỬI THƯ THẬT QUA RESEND) ====================
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email } = req.body;
@@ -155,45 +143,40 @@ app.post('/api/auth/send-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         otpStorage[cleanEmail] = {
             otp,
-            expiresAt: Date.now() + 5 * 60 * 1000 // Có hiệu lực trong 5 phút
+            expiresAt: Date.now() + 5 * 60 * 1000
         };
 
-        // IN THẲNG MÃ RA TERMINAL ĐỂ XEM NHANH
         console.log(`\n========================================`);
         console.log(`🔑 [DEBUG OTP] Mã OTP của ${cleanEmail} là: ${otp}`);
         console.log(`========================================\n`);
 
-        // Gửi email bất đồng bộ không chặn luồng phản hồi API
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            transporter.sendMail({
-                from: `"Vua Giải Tích HUST" <${process.env.EMAIL_USER}>`,
+        // Gửi email qua HTTP API của Resend
+        if (process.env.RESEND_API_KEY) {
+            const sendResult = await resend.emails.send({
+                from: 'Vua Giai Tich <onboarding@resend.dev>',
                 to: cleanEmail,
                 subject: 'Mã OTP Khôi Phục Mật Khẩu - Vua Giải Tích',
                 html: `
                     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
                         <h2>Khôi phục mật khẩu tài khoản Vua Giải Tích</h2>
                         <p>Mã xác thực OTP của bạn là:</p>
-                        <div style="font-size: 28px; font-weight: bold; color: #06b6d4; letter-spacing: 4px; padding: 10px 0;">
+                        <div style="font-size: 32px; font-weight: bold; color: #06b6d4; letter-spacing: 5px; padding: 12px 0;">
                             ${otp}
                         </div>
-                        <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng tuyệt đối không chia sẻ mã này cho người khác.</p>
+                        <p>Mã có hiệu lực trong vòng <b>5 phút</b>. Vui lòng không chia sẻ mã này cho người khác.</p>
                     </div>
                 `
-            }).then(() => {
-                console.log(`✅ Đã gửi email OTP thành công tới ${cleanEmail}`);
-            }).catch((mailErr) => {
-                console.warn('⚠️ Lỗi gửi thư qua Gmail (vẫn có thể lấy OTP ở Terminal):', mailErr.message);
             });
+            console.log('✅ Kết quả gửi mail qua Resend:', sendResult);
         }
 
-        // Trả phản hồi ngay lập tức và đính kèm mã OTP để giao diện hiển thị thông báo
         res.json({ 
             success: true, 
-            message: `Mã OTP của bạn là: ${otp} (Đã gửi tới email của bạn)` 
+            message: 'Đã gửi mã OTP thành công về hộp thư của bạn!' 
         });
     } catch (error) {
-        console.error('Lỗi send-otp:', error);
-        res.status(500).json({ success: false, message: 'Lỗi server khi tạo mã OTP!' });
+        console.error('Lỗi gửi OTP qua API:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi gửi mail OTP!' });
     }
 });
 
@@ -214,7 +197,7 @@ app.post('/api/auth/verify-otp-reset-password', async (req, res) => {
         let user = await User.findOne({ email: cleanEmail });
         if (user) {
             user.password = hashedPassword;
-            user.currentDeviceToken = null; // Huỷ token phiên đăng nhập cũ
+            user.currentDeviceToken = null;
             await user.save();
         } else {
             user = new User({
