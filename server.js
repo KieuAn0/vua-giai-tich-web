@@ -26,7 +26,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Đã kết nối thành công với MongoDB!'))
     .catch(err => console.error('❌ Lỗi kết nối MongoDB:', err));
 
-// Cấu hình gửi mail qua Gmail Nodemailer thuần túy
+// Cấu hình gửi mail qua Gmail Nodemailer
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -40,7 +40,7 @@ const otpStorage = {};
 
 // ==================== SCHEMA & MODEL ====================
 const userSchema = new mongoose.Schema({
-    id: { type: String, unique: true, sparse: true }, // Mã định danh sinh viên kiểu VGT-XXXXXX
+    id: { type: String, unique: true, sparse: true }, 
     name: { type: String, default: 'Sinh Viên HUST' },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -173,7 +173,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// ==================== API ADMIN: CẤP PHÁT DỊCH VỤ CHO TÀI KHOẢN (MONGODB) ====================
+// ==================== API ADMIN: CẤP PHÁT DỊCH VỤ TRỰC TIẾP MONGODB ====================
 app.post('/api/admin/grant-service', async (req, res) => {
     try {
         const { adminEmail, targetIdOrEmail, type, quantity } = req.body;
