@@ -283,50 +283,64 @@
         },
 
         adminApproveRequest(reqItem) {
-            const db = this.getAccountsDB();
-            const acc = db[reqItem.userEmail];
-            if (!acc) return;
+    const db = this.getAccountsDB();
+    const acc = db[reqItem.userEmail];
+    if (!acc) {
+        showToast('Không tìm thấy tài khoản tương ứng trong cơ sở dữ liệu!', 'error');
+        return;
+    }
 
-            const now = Date.now();
-            const oneDayMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
 
-            if (reqItem.type === 'single') {
-                acc.availableAttempts = (parseInt(acc.availableAttempts) || 0) + 1;
-            } else if (reqItem.type === 'month') {
-                const currentExpire = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
-                acc.vipExpireTimestamp = currentExpire + (30 * oneDayMs);
-            } else if (reqItem.type === 'semester') {
-                const currentExpire = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
-                acc.vipExpireTimestamp = currentExpire + (150 * oneDayMs);
-            }
+    // Đảm bảo khởi tạo các thuộc tính nếu chưa có
+    if (acc.availableAttempts === undefined) acc.availableAttempts = 0;
+    if (acc.vipExpireTimestamp === undefined) acc.vipExpireTimestamp = 0;
 
-            if (acc.transactionHistory) {
-                const tx = acc.transactionHistory.find(t => t.id === reqItem.id);
-                if (tx) tx.status = 'Thành công';
-            }
+    if (reqItem.type === 'single') {
+        acc.availableAttempts = parseInt(acc.availableAttempts) + 1;
+    } else if (reqItem.type === 'month') {
+        const currentExpire = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+        acc.vipExpireTimestamp = currentExpire + (30 * oneDayMs);
+    } else if (reqItem.type === 'semester') {
+        const currentExpire = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+        acc.vipExpireTimestamp = currentExpire + (150 * oneDayMs);
+    }
 
-            if (acc.pendingRequests) {
-                acc.pendingRequests = acc.pendingRequests.filter(r => r.id !== reqItem.id);
-            }
-            this.saveAccountsDB(db);
+    // Cập nhật trạng thái giao dịch trong lịch sử của tài khoản đó
+    if (acc.transactionHistory) {
+        const tx = acc.transactionHistory.find(t => t.id === reqItem.id);
+        if (tx) tx.status = 'Thành công';
+    }
 
-            this.allRequestsList = this.allRequestsList.filter(r => r.id !== reqItem.id);
-            this.approvedRequestsList.unshift({
-                ...reqItem,
-                status: 'Thành công'
-            });
+    // Xóa khỏi danh sách đơn chờ duyệt của tài khoản
+    if (acc.pendingRequests) {
+        acc.pendingRequests = acc.pendingRequests.filter(r => r.id !== reqItem.id);
+    }
 
-            if (this.user.email === reqItem.userEmail) {
-                this.user = acc;
-            }
+    // Lưu lại vào localStorage
+    db[reqItem.userEmail] = acc;
+    this.saveAccountsDB(db);
 
-            if (this.paginatedRequests.length === 0 && this.adminPage > 1) {
-                this.adminPage--;
-            }
+    // Cập nhật lại danh sách hiển thị trên giao diện quản trị
+    this.allRequestsList = this.allRequestsList.filter(r => r.id !== reqItem.id);
+    this.approvedRequestsList.unshift({
+        ...reqItem,
+        status: 'Thành công'
+    });
 
-            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            showToast('Đã duyệt đơn ' + reqItem.id + ': Tài khoản ' + acc.name + ' đã nhận quyền lợi!', 'success');
-        },
+    // Nếu tài khoản đang đăng nhập chính là tài khoản vừa được duyệt thì đồng bộ state `user` ngay lập tức
+    if (this.user && this.user.email && this.user.email.toLowerCase() === reqItem.userEmail.toLowerCase()) {
+        this.user = acc;
+    }
+
+    if (this.paginatedRequests.length === 0 && this.adminPage > 1) {
+        this.adminPage--;
+    }
+
+    this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+    showToast('Đã duyệt đơn ' + reqItem.id + ': Tài khoản ' + acc.name + ' đã được cộng quyền lợi thành công!', 'success');
+},
 
         adminRejectRequest(reqItem) {
             const db = this.getAccountsDB();
