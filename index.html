@@ -4,20 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vua Giải Tích - Hệ Thống Ôn Thi Thử Giữa Kỳ Do Sinh Viên Bách Khoa Phát Triển</title>
-    <!-- Cấu hình hiển thị xem trước khi gửi link qua Facebook, Zalo, Messenger, Telegram -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://vua-giai-tich.onrender.com/">
-    <meta property="og:title" content="Vua Giải Tích - Ôn Thi Thử Giữa Kỳ HUST Chuẩn Cấu Trúc">
-    <meta property="og:description" content="Hệ thống thi thử trắc nghiệm toán Đại số và Giải tích 1-2-3 dành riêng cho sinh viên Bách Khoa. Đầy đủ mã lớp, chấm điểm tự động kèm lời giải chi tiết.">
-    <meta property="og:image" content="https://vua-giai-tich.onrender.com/banner.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-
-    <!-- Cấu hình hiển thị xem trước cho Twitter / X -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Vua Giải Tích - Ôn Thi Thử Giữa Kỳ HUST Chuẩn Cấu Trúc">
-    <meta name="twitter:description" content="Luyện thi trắc nghiệm toán Đại số, Giải tích HUST có chấm điểm và giải chi tiết.">
-    <meta name="twitter:image" content="https://vua-giai-tich.onrender.com/banner.png">
 
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1329'/%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath stroke='%2310b981' stroke-width='2.2' d='M16 8a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'/%3E%3Cpath stroke='%2310b981' stroke-width='2.2' d='M16 2v4m0 20v4M2 16h4m20 0h4m-5.1-10.9l-2.8 2.8m-12.2 12.2l-2.8 2.8m0-17.8l2.8 2.8m12.2 12.2l2.8 2.8'/%3E%3Cpath stroke='%2306b6d4' stroke-width='2.4' d='M15 8l-6 20m8-20l6 20'/%3E%3Ccircle cx='16' cy='7' r='2' fill='%2338bdf8' stroke='%2338bdf8' stroke-width='1.5'/%3E%3Cpath stroke='%2338bdf8' stroke-width='1.8' d='M11 19c3-1.5 7-1.5 10 0'/%3E%3Ccircle cx='16' cy='18.2' r='1.2' fill='%23f59e0b'/%3E%3C/g%3E%3C/svg%3E">
 
@@ -82,7 +68,7 @@
         step: 1,
 
         // QUẢN TRỊ ADMIN: Tab, dữ liệu & phân trang
-        adminTab: 'pending', // 'pending' | 'approved' | 'revenue'
+        adminTab: 'pending', // 'pending' | 'approved' | 'revenue' | 'addService'
         allRequestsList: [],
         approvedRequestsList: [],
         adminPage: 1,
@@ -450,7 +436,7 @@
 
             if (!this.user.usedGiftcodes) this.user.usedGiftcodes = []; 
 
-           if (code === 'KIEUNGUYENANCUTEPHOMAIQUE') {
+            if (code === 'KIEUNGUYENANCUTEPHOMAIQUE') {
                 if (this.user.usedGiftcodes.includes(code)) {
                     showToast('Tài khoản của bạn đã sử dụng mã code này rồi!', 'error'); 
                     return;
@@ -473,7 +459,6 @@
                     return;
                 }
 
-                // Cộng hạn dùng vé tháng (30 ngày = 30 * 24 * 60 * 60 * 1000 ms)
                 const now = Date.now();
                 const oneMonthMs = 30 * 24 * 60 * 60 * 1000;
                 const currentExpire = (this.user.vipExpireTimestamp && this.user.vipExpireTimestamp > now) ? this.user.vipExpireTimestamp : now;
@@ -487,7 +472,7 @@
 
                 this.inputGiftcode = ''; 
                 this.openGiftcodeModal = false; 
-                showToast('Kích hoạt thành công: Bạn nhận được 1 Vé Tháng FREE!', 'success');
+                showToast('Kích hoạt thành công: Bạn nhận được 1 Vé Tháng (Vô hạn đề thi)!', 'success');
             } 
             else {
                 showToast('Mã code không chính xác hoặc đã hết hạn!', 'error');
@@ -695,7 +680,6 @@
                 return;
             }
 
-            // Đồng bộ đăng ký sang backend MongoDB
             try {
                 await fetch('/api/auth/register', {
                     method: 'POST',
@@ -840,7 +824,6 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    // Đồng bộ đổi mật khẩu trong localStorage
                     const db = this.getAccountsDB();
                     if (db[cleanEmail]) {
                         db[cleanEmail].password = this.newPassword;
@@ -1626,21 +1609,26 @@
                     </div>
                 </div>
 
-                <!-- 3 TAB ĐIỀU HƯỚNG QUẢN TRỊ -->
-                <div class="flex border-b border-slate-800/80 gap-6 text-xs font-semibold pt-1">
-                    <button type="button" @click="adminTab = 'pending'" :class="{ 'text-amber-400 border-b-2 border-amber-400 font-bold': adminTab === 'pending', 'text-slate-400 hover:text-slate-200': adminTab !== 'pending' }" class="pb-2 flex items-center gap-1.5">
+                <!-- 4 TAB ĐIỀU HƯỚNG QUẢN TRỊ (Đã thêm tab Thêm Tùy Chọn Dịch Vụ) -->
+                <div class="flex border-b border-slate-800/80 gap-6 text-xs font-semibold pt-1 overflow-x-auto custom-scroll pb-1">
+                    <button type="button" @click="adminTab = 'pending'" :class="{ 'text-amber-400 border-b-2 border-amber-400 font-bold': adminTab === 'pending', 'text-slate-400 hover:text-slate-200': adminTab !== 'pending' }" class="pb-2 flex items-center gap-1.5 whitespace-nowrap">
                         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
                         <span>Đơn Chờ Xét Duyệt (<span x-text="allRequestsList.length"></span>)</span>
                     </button>
                     
-                    <button type="button" @click="adminTab = 'approved'" :class="{ 'text-emerald-400 border-b-2 border-emerald-400 font-bold': adminTab === 'approved', 'text-slate-400 hover:text-slate-200': adminTab !== 'approved' }" class="pb-2 flex items-center gap-1.5">
+                    <button type="button" @click="adminTab = 'approved'" :class="{ 'text-emerald-400 border-b-2 border-emerald-400 font-bold': adminTab === 'approved', 'text-slate-400 hover:text-slate-200': adminTab !== 'approved' }" class="pb-2 flex items-center gap-1.5 whitespace-nowrap">
                         <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
                         <span>Lịch Sử Các Đơn Đã Duyệt (<span x-text="approvedRequestsList.length"></span>)</span>
                     </button>
 
-                    <button type="button" @click="adminTab = 'revenue'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': adminTab === 'revenue', 'text-slate-400 hover:text-slate-200': adminTab !== 'revenue' }" class="pb-2 flex items-center gap-1.5">
+                    <button type="button" @click="adminTab = 'revenue'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': adminTab === 'revenue', 'text-slate-400 hover:text-slate-200': adminTab !== 'revenue' }" class="pb-2 flex items-center gap-1.5 whitespace-nowrap">
                         <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
                         <span>Tổng Thu Theo Từng Tháng</span>
+                    </button>
+
+                    <button type="button" @click="adminTab = 'addService'; adminServiceInput = { id: '', type: 'single', quantity: 1 }" :class="{ 'text-purple-400 border-b-2 border-purple-400 font-bold': adminTab === 'addService', 'text-slate-400 hover:text-slate-200': adminTab !== 'addService' }" class="pb-2 flex items-center gap-1.5 whitespace-nowrap">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                        <span>+ Thêm Tùy Chọn Dịch Vụ</span>
                     </button>
                 </div>
             </div>
@@ -1808,6 +1796,95 @@
                 </div>
             </div>
 
+            <!-- TAB 4: THÊM TÙY CHỌN DỊCH VỤ DỰA TRÊN ID TÀI KHOẢN -->
+            <div x-show="adminTab === 'addService'" class="space-y-4 py-2" x-data="{ adminServiceInput: { id: '', type: 'single', quantity: 1 } }">
+                <div class="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 max-w-xl mx-auto">
+                    <div class="space-y-1">
+                        <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-purple-400"></i> Cấp Phát / Thêm Dịch Vụ Cho Tài Khoản
+                        </h4>
+                        <p class="text-xs text-slate-400">Nhập chính xác ID sinh viên (ví dụ: <code class="text-cyan-400 font-mono">VGT-482910</code>) để cộng thêm lượt thi hoặc kích hoạt gói VIP trực tiếp.</p>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div class="space-y-1">
+                            <label class="block font-semibold text-slate-300">Mã ID Tài Khoản Sinh Viên:</label>
+                            <input type="text" x-model="adminServiceInput.id" placeholder="VD: VGT-123456" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:outline-none focus:border-purple-400">
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="block font-semibold text-slate-300">Chọn Loại Dịch Vụ Cấp Phát:</label>
+                            <select x-model="adminServiceInput.type" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-400">
+                                <option value="single">Cộng Lượt Thi Lẻ (+1 Lượt/Đề)</option>
+                                <option value="month">Gói Thành Viên Tháng (+30 Ngày VIP)</option>
+                                <option value="semester">Gói Thành Viên Kỳ (+150 Ngày VIP)</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1" x-show="adminServiceInput.type === 'single'">
+                            <label class="block font-semibold text-slate-300">Số lượng lượt cộng thêm:</label>
+                            <input type="number" min="1" max="50" x-model.number="adminServiceInput.quantity" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:border-purple-400">
+                        </div>
+
+                        <button type="button" @click="
+                            if(!adminServiceInput.id) { showToast('Vui lòng nhập ID tài khoản sinh viên!', 'error'); return; }
+                            const db = getAccountsDB();
+                            let targetEmail = null;
+                            for(let em in db) {
+                                if(db[em].id && db[em].id.trim().toUpperCase() === adminServiceInput.id.trim().toUpperCase()) {
+                                    targetEmail = em;
+                                    break;
+                                }
+                            }
+                            if(!targetEmail) {
+                                showToast('Không tìm thấy tài khoản với ID: ' + adminServiceInput.id, 'error');
+                                return;
+                            }
+                            const acc = db[targetEmail];
+                            const now = Date.now();
+                            const oneDayMs = 24 * 60 * 60 * 1000;
+                            let actionTitle = '';
+
+                            if(adminServiceInput.type === 'single') {
+                                const qty = parseInt(adminServiceInput.quantity) || 1;
+                                acc.availableAttempts = (parseInt(acc.availableAttempts) || 0) + qty;
+                                actionTitle = `Cấp thêm ${qty} lượt thi lẻ`;
+                            } else if(adminServiceInput.type === 'month') {
+                                const cur = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+                                acc.vipExpireTimestamp = cur + (30 * oneDayMs);
+                                actionTitle = 'Cấp Vé Tháng (30 ngày)';
+                            } else if(adminServiceInput.type === 'semester') {
+                                const cur = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+                                acc.vipExpireTimestamp = cur + (150 * oneDayMs);
+                                actionTitle = 'Cấp Vé Kỳ (150 ngày)';
+                            }
+
+                            if(!acc.transactionHistory) acc.transactionHistory = [];
+                            const txId = 'ADM' + Date.now().toString().slice(-6);
+                            acc.transactionHistory.unshift({
+                                id: txId,
+                                title: '[Admin Cấp] ' + actionTitle,
+                                price: 0,
+                                type: adminServiceInput.type,
+                                time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' ' + new Date().toLocaleDateString('vi-VN'),
+                                date: new Date().toLocaleDateString('vi-VN'),
+                                status: 'Thành công'
+                            });
+
+                            saveAccountsDB(db);
+                            loadAdminRequests();
+                            if(user.email === targetEmail) {
+                                user = acc;
+                            }
+                            showToast(`Đã cấp thành công cho tài khoản ${acc.name} (${acc.id})!`, 'success');
+                            adminServiceInput.id = '';
+                        " class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i> XÁC NHẬN CẤP DỊCH VỤ CHO TÀI KHOẢN
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Footer Modal -->
             <div class="pt-3 border-t border-slate-800 flex justify-end">
                 <button @click="openAdminModal = false" class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition-all">
@@ -1827,7 +1904,7 @@
                 <button @click="authTab = 'register'" :class="{ 'text-cyan-400 border-b-2 border-cyan-400 font-bold': authTab === 'register', 'text-slate-400 hover:text-slate-200': authTab !== 'register' }" class="flex-1 text-center pb-2 text-base font-semibold transition-all">Tạo Tài Khoản</button>
             </div>
 
-            <!-- ĐĂNG NHẬP (Có nút Quên mật khẩu) -->
+            <!-- ĐĂNG NHẬP -->
             <form x-show="authTab === 'login'" @submit.prevent="handleLogin($event)" class="space-y-4">
                 <div class="space-y-1 text-left">
                     <label class="text-xs text-slate-300 font-medium">Email sinh viên</label>
