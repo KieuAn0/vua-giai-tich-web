@@ -1843,7 +1843,7 @@
                         <button type="button" @click="
     if(!adminServiceInput.id) { showToast('Vui lòng nhập ID hoặc Email tài khoản!', 'error'); return; }
     
-    showToast('Đang xử lý trên cơ sở dữ liệu MongoDB...', 'info');
+    showToast('Đang cập nhật trực tiếp lên MongoDB...', 'info');
 
     fetch('/api/admin/grant-service', {
         method: 'POST',
@@ -1860,14 +1860,14 @@
         if(data.success) {
             showToast(data.message, 'success');
             adminServiceInput.id = '';
-            loadAdminRequests(); // Tải lại danh sách
+            loadAdminRequests(); // Tải lại danh sách quản trị
         } else {
             showToast(data.message || 'Không tìm thấy tài khoản trên MongoDB!', 'error');
         }
     })
     .catch(err => {
         console.error(err);
-        showToast('Lỗi kết nối tới server backend MongoDB!', 'error');
+        showToast('Lỗi kết nối tới server backend!', 'error');
     });
 " class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2">
     <i data-lucide="check-circle" class="w-4 h-4"></i> XÁC NHẬN CẤP DỊCH VỤ CHO TÀI KHOẢN
