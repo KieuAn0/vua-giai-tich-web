@@ -247,6 +247,65 @@ app.post('/api/admin/grant-service', async (req, res) => {
     }
 });
 
+// ==================== API ADMIN: DUYỆT ĐƠN NẠP TIỀN CHUYỂN KHOẢN ====================
+app.post('/api/admin/approve-request', async (req, res) => {
+    try {
+        const { adminEmail, userEmail, requestId, type } = req.body;
+        
+        if (!adminEmail || adminEmail.toLowerCase() !== 'kieunguyenan5a2@gmail.com') {
+            return res.status(403).json({ success: false, message: 'Không có quyền admin!' });
+        }
+
+        const user = await User.findOne({ email: userEmail.toLowerCase() });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản sinh viên!' });
+        }
+
+        const now = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+
+        if (user.availableAttempts === undefined) user.availableAttempts = 0;
+        if (user.vipExpireTimestamp === undefined) user.vipExpireTimestamp = 0;
+
+        if (type === 'single') {
+            user.availableAttempts += 1;
+        } else if (type === 'month') {
+            const currentExpire = (user.vipExpireTimestamp > now) ? user.vipExpireTimestamp : now;
+            user.vipExpireTimestamp = currentExpire + (30 * oneDayMs);
+        } else if (type === 'semester') {
+            const currentExpire = (user.vipExpireTimestamp > now) ? user.vipExpireTimestamp : now;
+            user.vipExpireTimestamp = currentExpire + (150 * oneDayMs);
+        }
+
+        if (user.transactionHistory) {
+            const tx = user.transactionHistory.find(t => t.id === requestId);
+            if (tx) tx.status = 'Thành công';
+        }
+        if (user.pendingRequests) {
+            user.pendingRequests = user.pendingRequests.filter(r => r.id !== requestId);
+        }
+
+        await user.save();
+        res.json({ 
+            success: true, 
+            message: `Đã duyệt thành công cho tài khoản ${user.name}!`,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                availableAttempts: user.availableAttempts,
+                vipExpireTimestamp: user.vipExpireTimestamp,
+                transactionHistory: user.transactionHistory,
+                pendingRequests: user.pendingRequests,
+                history: user.history
+            }
+        });
+    } catch (err) {
+        console.error('Lỗi approve-request:', err);
+        res.status(500).json({ success: false, message: 'Lỗi server khi duyệt đơn!' });
+    }
+});
+
 // ==================== API GỬI MÃ OTP QUA GMAIL ====================
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
