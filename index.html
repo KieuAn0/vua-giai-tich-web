@@ -1827,60 +1827,65 @@
                         </div>
 
                         <button type="button" @click="
-                            if(!adminServiceInput.id) { showToast('Vui lòng nhập ID tài khoản sinh viên!', 'error'); return; }
-                            const db = getAccountsDB();
-                            let targetEmail = null;
-                            for(let em in db) {
-                                if(db[em].id && db[em].id.trim().toUpperCase() === adminServiceInput.id.trim().toUpperCase()) {
-                                    targetEmail = em;
-                                    break;
-                                }
-                            }
-                            if(!targetEmail) {
-                                showToast('Không tìm thấy tài khoản với ID: ' + adminServiceInput.id, 'error');
-                                return;
-                            }
-                            const acc = db[targetEmail];
-                            const now = Date.now();
-                            const oneDayMs = 24 * 60 * 60 * 1000;
-                            let actionTitle = '';
+    if(!adminServiceInput.id) { showToast('Vui lòng nhập ID tài khoản sinh viên!', 'error'); return; }
+    const db = getAccountsDB();
+    let targetEmail = null;
+    const searchKey = adminServiceInput.id.trim().toLowerCase();
 
-                            if(adminServiceInput.type === 'single') {
-                                const qty = parseInt(adminServiceInput.quantity) || 1;
-                                acc.availableAttempts = (parseInt(acc.availableAttempts) || 0) + qty;
-                                actionTitle = `Cấp thêm ${qty} lượt thi lẻ`;
-                            } else if(adminServiceInput.type === 'month') {
-                                const cur = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
-                                acc.vipExpireTimestamp = cur + (30 * oneDayMs);
-                                actionTitle = 'Cấp Vé Tháng (30 ngày)';
-                            } else if(adminServiceInput.type === 'semester') {
-                                const cur = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
-                                acc.vipExpireTimestamp = cur + (150 * oneDayMs);
-                                actionTitle = 'Cấp Vé Kỳ (150 ngày)';
-                            }
+    for(let em in db) {
+        const acc = db[em];
+        if(em.toLowerCase() === searchKey || (acc.id && acc.id.toLowerCase() === searchKey)) {
+            targetEmail = em;
+            break;
+        }
+    }
 
-                            if(!acc.transactionHistory) acc.transactionHistory = [];
-                            const txId = 'ADM' + Date.now().toString().slice(-6);
-                            acc.transactionHistory.unshift({
-                                id: txId,
-                                title: '[Admin Cấp] ' + actionTitle,
-                                price: 0,
-                                type: adminServiceInput.type,
-                                time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' ' + new Date().toLocaleDateString('vi-VN'),
-                                date: new Date().toLocaleDateString('vi-VN'),
-                                status: 'Thành công'
-                            });
+    if(!targetEmail) {
+        showToast('Không tìm thấy tài khoản với ID: ' + adminServiceInput.id, 'error');
+        return;
+    }
 
-                            saveAccountsDB(db);
-                            loadAdminRequests();
-                            if(user.email === targetEmail) {
-                                user = acc;
-                            }
-                            showToast(`Đã cấp thành công cho tài khoản ${acc.name} (${acc.id})!`, 'success');
-                            adminServiceInput.id = '';
-                        " class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2">
-                            <i data-lucide="check-circle" class="w-4 h-4"></i> XÁC NHẬN CẤP DỊCH VỤ CHO TÀI KHOẢN
-                        </button>
+    const acc = db[targetEmail];
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    let actionTitle = '';
+
+    if(adminServiceInput.type === 'single') {
+        const qty = parseInt(adminServiceInput.quantity) || 1;
+        acc.availableAttempts = (parseInt(acc.availableAttempts) || 0) + qty;
+        actionTitle = `Cấp thêm ${qty} lượt thi lẻ`;
+    } else if(adminServiceInput.type === 'month') {
+        const cur = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+        acc.vipExpireTimestamp = cur + (30 * oneDayMs);
+        actionTitle = 'Cấp Vé Tháng (30 ngày)';
+    } else if(adminServiceInput.type === 'semester') {
+        const cur = (acc.vipExpireTimestamp && acc.vipExpireTimestamp > now) ? acc.vipExpireTimestamp : now;
+        acc.vipExpireTimestamp = cur + (150 * oneDayMs);
+        actionTitle = 'Cấp Vé Kỳ (150 ngày)';
+    }
+
+    if(!acc.transactionHistory) acc.transactionHistory = [];
+    const txId = 'ADM' + Date.now().toString().slice(-6);
+    acc.transactionHistory.unshift({
+        id: txId,
+        title: '[Admin Cấp] ' + actionTitle,
+        price: 0,
+        type: adminServiceInput.type,
+        time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' ' + new Date().toLocaleDateString('vi-VN'),
+        date: new Date().toLocaleDateString('vi-VN'),
+        status: 'Thành công'
+    });
+
+    saveAccountsDB(db);
+    loadAdminRequests();
+    if(user.email === targetEmail) {
+        user = acc;
+    }
+    showToast(`Đã cấp thành công cho tài khoản ${acc.name} (${acc.id})!`, 'success');
+    adminServiceInput.id = '';
+" class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2">
+    <i data-lucide="check-circle" class="w-4 h-4"></i> XÁC NHẬN CẤP DỊCH VỤ CHO TÀI KHOẢN
+</button>
                     </div>
                 </div>
             </div>
